@@ -2,7 +2,7 @@
 library(grid)
 library(gridSVG)
 
-x11(width=6, height=6)
+dev.new(width=6, height=6)
 # Force white background and black foreground
 pushViewport(viewport(gp=gpar(col="black", fill="white")))
 grid.rect()

@@ -58,9 +58,9 @@ as.animValue(x, ...)
 }
 \examples{
 animValue(c("visible", "hidden"))
-animValue(unit(1:24, "in"),
-          timeid=rep(1:3, each=8),
-          id=rep(1:2, 12))
+animUnit(unit(1:24, "in"),
+         timeid=rep(1:3, each=8),
+         id=rep(1:2, 12))
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

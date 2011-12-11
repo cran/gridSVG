@@ -54,7 +54,7 @@ S3method("grobToDev", "gTree")
 S3method("grobToDev", "frame")
 S3method("grobToDev", "cellGrob")
 S3method("grobToDev", "recordedGrob")
-S3method("grobToDev", "linked.grob")
+# S3method("grobToDev", "linked.grob")
 S3method("grobToDev", "script.grob")
 
 S3method("primToDev", "grob")
@@ -72,8 +72,12 @@ S3method("primToDev", "xaxis")
 S3method("primToDev", "yaxis")
 S3method("primToDev", "xspline")
 
+S3method("primToDev", "linked.grob")
 S3method("primToDev", "animated.grob")
 S3method("primToDev", "garnished.grob")
+
+S3method("link", "grob")
+S3method("link", "gTree")
 
 S3method("animate", "grob")
 S3method("animate", "gTree")
@@ -94,3 +98,9 @@ S3method("as.animValue", "list")
 
 S3method("print", "animValue")
 S3method("print", "animUnit")
+
+S3method("toMML", "numeric")
+S3method("toMML", "character")
+S3method("toMML", "name")
+S3method("toMML", "(")
+S3method("toMML", "call")

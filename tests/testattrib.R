@@ -4,7 +4,7 @@ library(grid)
 library(gridSVG)
 
 # A very simple test
-x11(width=6, height=6)
+dev.new(width=6, height=6)
 # Test script chunk
 grid.script(file="test.script")
 # Some default settings

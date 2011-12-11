@@ -35,7 +35,7 @@ setGeneric("devStartGroup",
            })
 
 setGeneric("devEndGroup",
-           function(device) {
+           function(name, device) {
              standardGeneric("devEndGroup")
            })
 

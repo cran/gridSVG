@@ -1,6 +1,6 @@
 library(grid)
 library(gridSVG)
-x11(width=6, height=6)
+dev.new(width=6, height=6)
 # Some default settings
 pushViewport(viewport(gp=gpar(col="black", fill=NA)))
 

@@ -299,6 +299,30 @@ ithAnimUnit <- function(animValues, origValue, i) {
                  au$timeid[au$id == i])
 }
 
+######################
+# applyAnimation methods
+#
+# There is one of these for each primitive, but they all have similar
+# structure:
+
+# if (group)
+#     animate the <g> element
+
+# else
+
+#     some sets of values (e.g., x/y) are animated together
+#     so bail out if this combination has already been animated
+
+#     recycle animation values to full length
+
+#     for each shape ...
+
+#         select anim values
+#         animate sets of values
+#         animate anything else
+
+######################
+
 applyAnimation.rect <- function(x, animSet, animation, group, dev) {
 
     if (group) {
@@ -622,14 +646,15 @@ applyAnimation.text <- function(x, animSet, animation, group, dev) {
 
 doNotAnimate <- function(animSet, animation) {
     # Avoid doing BOTH x and y if BOTH animated
-    if ((all(c("x", "y") %in% animSet$animations) &&
+    animNames <- names(animSet$animations)
+    if ((all(c("x", "y") %in% animNames) &&
          animation %in% c("x", "y") &&
-         match(animation, animSet$animations) ==
-         max(match(c("x", "y"), animSet$animations))) ||
-        (sum(c("x0", "y0", "x1", "y1") %in% animSet$animations) > 1 &&
+         match(animation, animNames) ==
+         max(match(c("x", "y"), animNames))) ||
+        (sum(c("x0", "y0", "x1", "y1") %in% animNames) > 1 &&
          animation %in% c("x0", "y0", "x1", "y1") &&
-         match(animation, animSet$animations) >
-         min(match(c("x0", "y0", "x1", "y1"), animSet$animations))))
+         match(animation, animNames) >
+         min(match(c("x0", "y0", "x1", "y1"), animNames), na.rm=TRUE)))
         TRUE
     else
         FALSE
@@ -831,11 +856,394 @@ applyAnimation.segments <- function(x, animSet, animation, group, dev) {
         }
     }
 }
+
+applyAnimation.polygon <- function(x, animSet, animation, group, dev) {
+    if (group) {
+        svgAnimate(animation,
+                   paste(ithValue(animSet$animations[[animation]], 1),
+                         collapse=";"),
+                   animSet$begin, animSet$interp, animSet$dur,
+                   animSet$rep, animSet$rev,
+                   x$name, dev@dev)
+    } else {
+        
+        if (doNotAnimate(animSet, animation))
+            return()
+    
+        # If we only have one polygon
+        if (is.null(x$id) && is.null(x$id.lengths)) {
+            x$id <- rep(1L, length(x$x))
+        }
+
+        # Multiple polygons exist
+        if (is.null(x$id)) {
+            n <- length(x$id.lengths)
+            id <- rep(1L:n, x$id.lengths)
+        } else {
+            n <- length(unique(x$id))
+            id <- x$id
+        }
+
+        # Repeating animation parameters so that each element can have
+        # distinct values
+        begin <- rep(animSet$begin, length.out = n)
+        interp <- rep(animSet$interp, length.out = n)
+        dur <- rep(animSet$duration, length.out = n)
+        rep <- rep(animSet$rep, length.out = n)
+        rev <- rep(animSet$revert, length.out = n)
+
+        for (i in 1:n) {
+            subName <- subGrobName(x$name, i)
+        
+            if ("x" %in% names(animSet$animations)) {
+                au <- ithAnimUnit(animSet$animations$x, x$x, i)
+                xx <- au$values
+                timeid <- au$timeid
+            } else {
+                xx <- x$x[x$id == i]
+            }
+            if ("y" %in% names(animSet$animations)) {
+                au <- ithAnimUnit(animSet$animations$y, x$y, i)
+                yy <- au$values
+                timeid <- au$timeid
+            } else {
+                yy <- x$y[x$id == i]
+            }
+
+            if (any(c("x", "y") %in% names(animSet$animations))) {
+                loc <- locToInches(xx, yy, dev)
+                svgAnimatePoints(cx(loc$x, dev), cy(loc$y, dev), timeid,
+                                 begin[i], interp[i], dur[i], rep[i], rev[i],
+                                 subName, dev@dev)
+            }
+            # Any other attribute
+            if (!(animation %in% c("x", "y"))) {
+                svgAnimate(animation,
+                           paste(ithValue(animSet$animations[[animation]], i),
+                                 collapse=";"),
+                           begin[i], interp[i], dur[i], rep[i], rev[i],
+                           subName, dev@dev)
+            }
+        }
+    }
+}
+
+applyAnimation.pathgrob <- function(x, animSet, animation, group, dev) {
+    if (group) {
+        svgAnimate(animation,
+                   paste(ithValue(animSet$animations[[animation]], 1),
+                         collapse=";"),
+                   animSet$begin, animSet$interp, animSet$dur,
+                   animSet$rep, animSet$rev,
+                   x$name, dev@dev)
+    } else {
+        
+        if (doNotAnimate(animSet, animation))
+            return()
+
+        # NOTE:  only ever drawing ONE line
+        begin <- animSet$begin
+        interp <- animSet$interp
+        dur <- animSet$duration
+        rep <- animSet$rep
+        rev <- animSet$revert
+
+        subName <- subGrobName(x$name, 1)
+
+        # Rather than looping through 'n' different shapes
+        # need to generate a set of animation values for a
+        # single shape consisting of multiple sub-paths
+        # at multiple time points
+
+        # If we only have one sub-path
+        if (is.null(x$id) && is.null(x$id.lengths)) {
+            x$id <- rep(1L, length(x$x))
+        }
+
+        # Multiple sub-paths
+        if (is.null(x$id)) {
+            n <- length(x$id.lengths)
+            id <- rep(1L:n, x$id.lengths)
+        } else {
+            n <- length(unique(x$id))
+            id <- x$id
+        }
+            
+        # NOTE:  according to the SVG spec, I think the animated values
+        #        HAVE to follow the original series of M, L, Z to be
+        #        valid;  otherwise behaviour of browser is undefined?
+        if ("x" %in% names(animSet$animations)) {
+            au <- as.animUnit(animSet$animations$x, attr(x$x, "unit"))
+            xx <- au$values
+            pathid <- au$id
+            timeid <- au$timeid
+        } else {
+            xx <- x$x
+        }
+        if ("y" %in% names(animSet$animations)) {
+            au <- as.animUnit(animSet$animations$y, attr(x$y, "unit"))
+            yy <- au$values
+            pathid <- au$id
+            timeid <- au$timeid
+        } else {
+            yy <- x$y
+        }
+
+        # Only one sub-path
+        if (is.null(pathid)) {
+            pathid <- rep(id, length.out=length(timeid))
+        }
+    
+        if (any(c("x", "y") %in% names(animSet$animations))) {
+            loc <- locToInches(xx, yy, dev)
+            svgAnimatePath(cx(loc$x, dev), cy(loc$y, dev), pathid, timeid,
+                           begin, interp, dur, rep, rev, subName, dev@dev)
+        }
+        # Any other attribute
+        if (!(animation %in% c("x", "y"))) {
+            svgAnimate(animation,
+                       paste(ithValue(animSet$animations[[animation]], 1),
+                             collapse=";"),
+                       begin, interp, dur, rep, rev, subName, dev@dev)
+        }
+    }  
+}
+
+applyAnimation.rastergrob <- function(x, animSet, animation, group, dev) {
+
+    if (group) {
+        svgAnimate(animation,
+                   paste(ithValue(animSet$animations[[animation]], 1),
+                         collapse=";"),
+                   animSet$begin, animSet$interp, animSet$dur,
+                   animSet$rep, animSet$rev,
+                   x$name, dev@dev)
+    } else {
+
+        # We may be dealing with multiple rasters that need animating
+        n <- max(length(x$x), length(x$y), length(x$width), length(x$height))
+
+        # Rep the original x/y/width/height out to be the same length
+        x$x <- rep(x$x, length.out=n)
+        x$y <- rep(x$y, length.out=n)
+        x$width <- rep(x$width, length.out=n)
+        x$height <- rep(x$height, length.out=n)
   
-# FIXME:  polygons, xsplines, pathgrob, rastergrob
+        # Repeating animation parameters so that each element can have
+        # distinct values
+        begin <- rep(animSet$begin, length.out = n)
+        interp <- rep(animSet$interp, length.out = n)
+        dur <- rep(animSet$duration, length.out = n)
+        rep <- rep(animSet$rep, length.out = n)
+        rev <- rep(animSet$revert, length.out = n)
+
+        for (i in 1:n) {
+            subName <- subGrobName(x$name, i)
+
+            # If x AND y change, need to transform together
+            # If width/height changes, have to animate x/y as well
+            # because SVG <rect> does not have justification
+            if ("x" %in% names(animSet$animations))
+                xi <- ithUnit(animSet$animations$x, x$x, i)
+            else
+                xi <- x$x[i]
+            if ("y" %in% names(animSet$animations))
+                yi <- ithUnit(animSet$animations$y, x$y, i)
+            else
+                yi <- x$y[i]
+            if ("width" %in% names(animSet$animations))
+                widthi <- ithUnit(animSet$animations$width, x$width, i)
+            else
+                widthi <- x$width[i]
+            if ("height" %in% names(animSet$animations))
+                heighti <- ithUnit(animSet$animations$height, x$height, i)
+            else
+                heighti <- x$height[i]
+            lb <- leftbottom(xi, yi, widthi, heighti, x$just, dev)
+    
+            switch(animation,
+                   x={
+                       dim <- dimToInches(widthi, heighti, dev)
+                       svgAnimateTranslation(cx(lb$x, dev),
+                                             ch(dim$h, dev) + cy(lb$y, dev),
+                                             begin[i], interp[i], dur[i],
+                                             rep[i], rev[i],
+                                             subName, dev@dev)
+                   },
+                   y={
+                       # If we are also animating "x" then this has
+                       # already been done
+                       if (!"x" %in% names(animSet$animations)) {
+                           dim <- dimToInches(widthi, heighti, dev)
+                           svgAnimateTranslation(cx(lb$x, dev),
+                                                 ch(dim$h, dev) +
+                                                 cy(lb$y, dev),
+                                                 begin[i], interp[i], dur[i],
+                                                 rep[i], rev[i],
+                                                 subName, dev@dev)
+                       }
+                   },
+                   width={
+                       dim <- dimToInches(widthi, heighti, dev)
+                       # If x is also animated,
+                       # this has already been handled above
+                       if (!any(c("x", "y") %in% names(animSet$animations))) {
+                           svgAnimateTranslation(cx(lb$x, dev),
+                                                 ch(dim$h, dev) +
+                                                 cy(lb$y, dev),
+                                                 begin[i], interp[i], dur[i],
+                                                 rep[i], rev[i],
+                                                 subName, dev@dev)
+                       }
+                       svgAnimateScale(cw(dim$w, dev), -ch(dim$h, dev), 
+                                       begin[i], interp[i], dur[i],
+                                       rep[i], rev[i],
+                                       paste(subName, "scale", sep="."),
+                                       dev@dev)
+                   },
+                   height={
+                       # If "width" is also animated,
+                       # this has already been done
+                       if ("width" %in% names(animSet$animations)) {
+                           dim <- dimToInches(widthi, heighti, dev)
+                           if (!any(c("x", "y") %in%
+                                    names(animSet$animations))) {
+                               svgAnimateTranslation(cx(lb$x, dev),
+                                                     ch(dim$h, dev) +
+                                                     cy(lb$y, dev),
+                                                     begin[i], interp[i],
+                                                     dur[i], rep[i], rev[i],
+                                                     subName, dev@dev)
+                           }
+                           svgAnimateScale(cw(dim$w, dev), -ch(dim$h, dev), 
+                                           begin[i], interp[i], dur[i],
+                                           rep[i], rev[i],
+                                           paste(subName, "scale", sep="."),
+                                           dev@dev)
+                       }
+                   },
+                   # Any other attribute
+                   {
+                       svgAnimate(animation,
+                                  paste(ithValue(animSet$animations[[animation]], i),
+                                        collapse=";"),
+                                  begin[i], interp[i], dur[i],
+                                  rep[i], rev[i], subName, dev@dev)
+                   })
+        }
+    }
+}
+
+applyAnimation.xspline <- function(x, animSet, animation, group, dev) {
+    if (group) {
+        svgAnimate(animation,
+                   paste(ithValue(animSet$animations[[animation]], 1),
+                         collapse=";"),
+                   animSet$begin, animSet$interp, animSet$dur,
+                   animSet$rep, animSet$rev,
+                   x$name, dev@dev)
+    } else {
+        
+        if (doNotAnimate(animSet, animation))
+            return()
+
+        # If we only have one xspline
+        if (is.null(x$id) && is.null(x$id.lengths)) {
+            x$id <- rep(1L, length(x$x))
+        }
+
+        # Multiple xsplines exist
+        if (is.null(x$id)) {
+            n <- length(x$id.lengths)
+            id <- rep(1L:n, x$id.lengths)
+        } else {
+            n <- length(unique(x$id))
+            id <- x$id
+        }
+
+        # Repeating animation parameters so that each element can have
+        # distinct values
+        begin <- rep(animSet$begin, length.out = n)
+        interp <- rep(animSet$interp, length.out = n)
+        dur <- rep(animSet$duration, length.out = n)
+        rep <- rep(animSet$rep, length.out = n)
+        rev <- rep(animSet$revert, length.out = n)
+
+        for (i in 1:n) {
+            subName <- subGrobName(x$name, i)
+        
+            if ("x" %in% names(animSet$animations)) {
+                au <- ithAnimUnit(animSet$animations$x, x$x, i)
+                xx <- au$values
+                timeid <- au$timeid
+            } else {
+                xx <- x$x[x$id == i]
+            }
+            if ("y" %in% names(animSet$animations)) {
+                au <- ithAnimUnit(animSet$animations$y, x$y, i)
+                yy <- au$values
+                timeid <- au$timeid
+            } else {
+                yy <- x$y[x$id == i]
+            }
+            
+            if (any(c("x", "y") %in% names(animSet$animations))) {
+
+                getSplinePoints <- function(x, y, grob) {
+                    tempSpline <- grob
+                    tempSpline$x <- x
+                    tempSpline$y <- y
+                    tempSpline$id <- NULL
+                    tempSpline$id.lengths <- NULL
+                    xsplinePoints(tempSpline)                    
+                }
+                
+                # for each time period, need to convert control
+                # points into (x, y) and then generate new timeid
+                nval <- length(timeid)
+                xx <- rep(xx, length.out=nval)
+                yy <- rep(yy, length.out=nval)
+                xxx <- split(xx, timeid)
+                yyy <- split(yy, timeid)
+                points <- mapply(getSplinePoints, xxx, yyy,
+                                 MoreArgs=list(grob=x), SIMPLIFY=FALSE)
+                timeid <- rep(1:length(points),
+                              sapply(points, function(p) length(p$x)))
+                xpoints <- do.call("unit.c", lapply(points, function(p) p$x))
+                ypoints <- do.call("unit.c", lapply(points, function(p) p$y))
+                if (x$open) {
+                    # animating a polyline element
+                    loc <- locToInches(xpoints, ypoints, dev)
+                    svgAnimatePoints(cx(loc$x, dev), cy(loc$y, dev), timeid,
+                                     begin[i], interp[i], dur[i],
+                                     rep[i], rev[i], subName, dev@dev)
+                } else {
+                    # animating a path element
+                    loc <- locToInches(xpoints, ypoints, dev)
+                    pathid <- rep(id, length.out=length(timeid))
+                    svgAnimatePath(cx(loc$x, dev), cy(loc$y, dev),
+                                   pathid, timeid,
+                                   begin[i], interp[i], dur[i],
+                                   rep[i], rev[i], subName, dev@dev)
+                } 
+            }
+            # Any other attribute
+            if (!(animation %in% c("x", "y"))) {
+                svgAnimate(animation,
+                           paste(ithValue(animSet$animations[[animation]], i),
+                                 collapse=";"),
+                           begin[i], interp[i], dur[i], rep[i], rev[i],
+                           subName, dev@dev)
+            }
+        }
+    }  
+}
+
+
 applyAnimation.grob <- function(x, ...) {
     # If we got here, then we've hit something that is not yet implemented
-    stop(paste("Animation of ", class(x)[1], " objects is not yet implemented",
+    stop(paste("Animation of ", paste(class(x), collapse=":"),
+               " objects is not yet implemented",
                sep=""))
 }
 

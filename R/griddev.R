@@ -228,7 +228,7 @@ enforceVP <- function(vp, dev) {
 unwindVP <- function(vp, depth, dev) {
     if (depth > 0) {
         for (i in 1:depth)
-            devEndGroup(dev)
+            devEndGroup("", dev)
         if (is.null(vp)) { # recorded pops or ups
             upViewport(depth)
         } else if (!inherits(vp, "vpPath")) {
@@ -359,7 +359,31 @@ devGrob.text <- function(x, dev) {
   textLineHeight <- ch(unit(gp$lineheight * gp$cex *
                             graphics::par("cin")[2], "inches"), dev)
   charHeight <- ch(charHeight, dev)
+  
+  # height of current font
+  # This corresponds to lineheight in SVG terms,
+  # which is defined to be font size
+  # see http://www.w3.org/TR/SVG/propidx.html
+  #   comment in row for 'baseline-shift' in the 'percentages' column
+  # This is needed for positioning plotmath expressions
+  # to anything close to the right place
+  xcex <- if (is.null(x$gp$cex)) 1 else x$gp$cex
+  fontHeight <- ch(unit(gp$fontsize * gp$cex * xcex/ 72, "inches"), dev)
 
+  # Width of the text/expression
+  
+  # MUST set x$vp to NULL before doing the following calculations
+  # because x$vp has already been asserted and the calculation may
+  # involve trying to assert it again!
+  # (which would mean hidden error because viewport pushed twice OR
+  #  visible error because try to "down" to viewport that does not exist)
+  x$vp <- NULL
+  
+  width <- cw(grobWidth(x), dev)
+  height <- ch(grobHeight(x), dev)
+  ascent <- ch(grobAscent(x), dev)
+  descent <- ch(grobDescent(x), dev)
+  
   # Checking whether to use just or [h/v]just
   # Will convert numerics to strings in justTo_just function
   just <- rep(x$just, length.out = 2)
@@ -378,8 +402,16 @@ devGrob.text <- function(x, dev) {
        hjust=hjust,
        vjust=vjust,
        rot=x$rot,
+       width=width,
+       height=height,
+       ascent=ascent,
+       descent=descent,
        lineheight=textLineHeight,
+       fontheight=fontHeight,
        charheight=charHeight,
+       fontfamily=gp$fontfamily,
+       fontface=switch(gp$font,
+         "plain", "bold", "italic", "bold.italic"),
        name=x$name)  
 }
 
@@ -394,14 +426,14 @@ devGrob.circle <- function(x, dev) {
 vpUsageTable <- data.frame(vpname = character(0),
                            count = integer(0),
                            stringsAsFactors=FALSE)
-assign("vpUsageTable", vpUsageTable, env = .gridSVGEnv)
+assign("vpUsageTable", vpUsageTable, envir = .gridSVGEnv)
 
 # Because viewports can be pushed into many times, and each
 # time we push we start a group, we need a *unique* id for that
 # group, otherwise clipping paths don't work correctly
 getvpID <- function(vpname) {
   # Finding out how many times a VP has been pushed to so fara
-  vput <- get("vpUsageTable", env = .gridSVGEnv)
+  vput <- get("vpUsageTable", envir = .gridSVGEnv)
   vpcount <- vput[vput$vpname == vpname, "count"]
 
   # If the VP name is not in the usage table, add it
@@ -411,14 +443,14 @@ getvpID <- function(vpname) {
                                  data.frame(vpname = vpname,
                                             count = vpcount,
                                             stringsAsFactors = FALSE)),
-           env = .gridSVGEnv)
-    vput <- get("vpUsageTable", env = .gridSVGEnv)
+           envir = .gridSVGEnv)
+    vput <- get("vpUsageTable", envir = .gridSVGEnv)
   }
 
   # Incrementing the vp appearance counter and storing it
   vpcount <- vpcount + 1
   vput[vput$vpname == vpname, "count"] <- vpcount
-  assign("vpUsageTable", vput, env = .gridSVGEnv)
+  assign("vpUsageTable", vput, envir = .gridSVGEnv)
 
   vpID <- paste(vpname,
                 vpcount,
@@ -563,6 +595,7 @@ primToDev.lines <- function(x, dev) {
   # This is a bit of a special case where we know there is only one
   # actual graphical object that is being created, so we are simply
   # going to modify it's name in place.
+  oldname <- x$name
   x$name <- subGrobName(x$name, 1)
 
   if (! is.null(x$arrow))
@@ -570,7 +603,8 @@ primToDev.lines <- function(x, dev) {
   devLines(devGrob(x, dev), gparToDevPars(x$gp), dev)
 
   # Ending the group
-  devEndGroup(dev)
+  x$name <- oldname
+  devEndGroup(x$name, dev)
 }
 
 primToDev.polyline <- function(x, dev) {
@@ -614,7 +648,7 @@ primToDev.polyline <- function(x, dev) {
   }
 
   # Ending the group
-  devEndGroup(dev)
+  devEndGroup(x$name, dev)
 }
 
 # Any more efficient way of doing this?
@@ -648,7 +682,7 @@ primToDev.segments <- function(x, dev) {
   }
 
   # Ending the group
-  devEndGroup(dev)
+  devEndGroup(x$name, dev)
 }
 
 primToDev.polygon <- function(x, dev) {
@@ -688,7 +722,7 @@ primToDev.polygon <- function(x, dev) {
   }
 
   # Ending the group
-  devEndGroup(dev)
+  devEndGroup(x$name, dev)
 }
 
 primToDev.xspline <- function(x, dev) {
@@ -774,7 +808,7 @@ primToDev.xspline <- function(x, dev) {
   }
 
   # Ending the group
-  devEndGroup(dev)
+  devEndGroup(x$name, dev)
 }
 
 primToDev.pathgrob <- function(x, dev) {
@@ -784,12 +818,14 @@ primToDev.pathgrob <- function(x, dev) {
   # This is a bit of a special case where we know there is only one
   # actual graphical object that is being created, so we are simply
   # going to modify it's name in place.
+  oldname <- x$name
   x$name <- subGrobName(x$name, 1)
 
   devPath(devGrob(x, dev), gparToDevPars(x$gp), dev)
 
   # Ending the group
-  devEndGroup(dev)
+  x$name <- oldname
+  devEndGroup(x$name, dev)
 }
 
 primToDev.rastergrob <- function(x, dev) {
@@ -896,7 +932,7 @@ primToDev.rastergrob <- function(x, dev) {
   }
 
   # Ending the group
-  devEndGroup(dev)
+  devEndGroup(x$name, dev)
 }
 
 primToDev.rect <- function(x, dev) {
@@ -929,7 +965,7 @@ primToDev.rect <- function(x, dev) {
   }
 
   # Ending the group
-  devEndGroup(dev)
+  devEndGroup(x$name, dev)
 }
 
 primToDev.text <- function(x, dev) {
@@ -946,12 +982,14 @@ primToDev.text <- function(x, dev) {
     textLabel <- rep(textLabel, length.out = n)
   } else {
     # Checking that no element of label vector is empty
-    textLabel <- sapply(x$label, function(t) {
-      if (nchar(t) == 0 | length(t) == 0)
-        " "
-      else
-        t
-    })
+    if (!is.language(x$label)) {
+        textLabel <- sapply(x$label, function(t) {
+            if (nchar(t) == 0 | length(t) == 0)
+                " "
+            else
+                t
+        })
+    }
     textLabel <- rep(x$label, length.out = n)
   }
 
@@ -977,7 +1015,7 @@ primToDev.text <- function(x, dev) {
   }
 
   # Ending the group
-  devEndGroup(dev)
+  devEndGroup(x$name, dev)
 }
 
 primToDev.circle <- function(x, dev) {
@@ -1005,7 +1043,7 @@ primToDev.circle <- function(x, dev) {
   }
 
   # Ending the group
-  devEndGroup(dev)
+  devEndGroup(x$name, dev)
 }
 
 # Quick fix for now
@@ -1106,7 +1144,7 @@ primToDev.points <- function(x, dev) {
                      gparToDevPars(pgp), dev)
 
             # Ending the group
-            devEndGroup(dev) 
+            devEndGroup(x$name, dev) 
         }
 
         if (pchs[i] == 4) { 
@@ -1132,7 +1170,7 @@ primToDev.points <- function(x, dev) {
                      gparToDevPars(pgp), dev)
 
             # Ending the group
-            devEndGroup(dev) 
+            devEndGroup(x$name, dev) 
         }
 
         if (pchs[i] == 5) { 
@@ -1194,7 +1232,7 @@ primToDev.points <- function(x, dev) {
                       gparToDevPars(pgp), dev)
 
             # Ending the group
-            devEndGroup(dev) 
+            devEndGroup(x$name, dev) 
         }
 
         if (pchs[i] == 8) {
@@ -1234,7 +1272,7 @@ primToDev.points <- function(x, dev) {
                      gparToDevPars(pgp), dev)
 
             # Ending the group
-            devEndGroup(dev) 
+            devEndGroup(x$name, dev) 
         }
 
         if (pchs[i] == 9) {
@@ -1270,7 +1308,7 @@ primToDev.points <- function(x, dev) {
                      gparToDevPars(pgp), dev)
 
             # Ending the group
-            devEndGroup(dev) 
+            devEndGroup(x$name, dev) 
         }
 
         if (pchs[i] == 10) {
@@ -1308,7 +1346,7 @@ primToDev.points <- function(x, dev) {
                       gparToDevPars(pgp), dev)
 
             # Ending the group
-            devEndGroup(dev)
+            devEndGroup(x$name, dev)
         }
 
         if (pchs[i] == 11) {
@@ -1341,7 +1379,7 @@ primToDev.points <- function(x, dev) {
                      gparToDevPars(pgp), dev)
 
             # Ending the group
-            devEndGroup(dev)
+            devEndGroup(x$name, dev)
         }
 
         if (pchs[i] == 12) {
@@ -1377,7 +1415,7 @@ primToDev.points <- function(x, dev) {
                      gparToDevPars(pgp), dev)
 
             # Ending the group
-            devEndGroup(dev)
+            devEndGroup(x$name, dev)
         }
 
         if (pchs[i] == 13) {
@@ -1413,7 +1451,7 @@ primToDev.points <- function(x, dev) {
                      gparToDevPars(pgp), dev)
 
             # Ending the group
-            devEndGroup(dev)
+            devEndGroup(x$name, dev)
         }
 
         if (pchs[i] == 14) {
@@ -1443,7 +1481,7 @@ primToDev.points <- function(x, dev) {
                      gparToDevPars(pgp), dev)
 
             # Ending the group
-            devEndGroup(dev)
+            devEndGroup(x$name, dev)
         }
 
         if (pchs[i] == 15) {
@@ -1589,10 +1627,11 @@ primToDev.points <- function(x, dev) {
     }
 
     # Ending the group
-    devEndGroup(dev) 
+    devEndGroup(x$name, dev) 
 }
   
 primToDev.xaxis <- function(x, dev) {
+    devStartGroup(devGrob(x, dev), gparToDevPars(x$gp), dev)
   # If the at is NULL then the axis will have no
   # children;  need to be calculated on-the-fly
   if (is.null(x$at)) {
@@ -1602,9 +1641,11 @@ primToDev.xaxis <- function(x, dev) {
     if (x$label)
       grobToDev(grid:::make.xaxis.labels(at, x$label, x$main), dev)
   } 
+    devEndGroup(x$name, dev)
 }
 
 primToDev.yaxis <- function(x, dev) {
+    devStartGroup(devGrob(x, dev), gparToDevPars(x$gp), dev)
   # If the at is NULL then the axis will have no
   # children;  need to be calculated on-the-fly
   if (is.null(x$at)) {
@@ -1614,6 +1655,7 @@ primToDev.yaxis <- function(x, dev) {
     if (x$label)
       grobToDev(grid:::make.yaxis.labels(at, x$label, x$main), dev)
   } 
+    devEndGroup(x$name, dev)
 }
 
 grobToDev.frame <- function(x, dev) {
@@ -1625,7 +1667,7 @@ grobToDev.frame <- function(x, dev) {
     
     devStartGroup(devGrob(x, dev), gparToDevPars(x$gp), dev)
     lapply(x$children, grobToDev, dev)
-    devEndGroup(dev)
+    devEndGroup(x$name, dev)
     
     if (!is.null(x$framevp)) {
         unwindVP(x$framevp, frameDepth, dev)
@@ -1643,7 +1685,7 @@ grobToDev.cellGrob <- function(x, dev) {
 
     devStartGroup(devGrob(x, dev), gparToDevPars(x$gp), dev)
     lapply(x$children, grobToDev, dev)
-    devEndGroup(dev)
+    devEndGroup(x$name, dev)
   
     if (!is.null(x$cellvp)) {
         unwindVP(x$cellvp, cellDepth, dev)
@@ -1665,7 +1707,7 @@ grobToDev.gTree <- function(x, dev) {
 primToDev.gTree <- function(x, dev) {
     devStartGroup(devGrob(x, dev), gparToDevPars(x$gp), dev)
     lapply(x$children, grobToDev, dev)
-    devEndGroup(dev)
+    devEndGroup(x$name, dev)
 }
 
 # Viewports (and vpPaths and downs and ups)

@@ -18,7 +18,7 @@ gridToSVG <- function(name="Rplots.svg") {
     vpUsageTable <- data.frame(vpname = character(0),
                                count = integer(0),
                                stringsAsFactors=FALSE)
-    assign("vpUsageTable", vpUsageTable, env = .gridSVGEnv)
+    assign("vpUsageTable", vpUsageTable, envir = .gridSVGEnv)
     # Convert gTree to SVG
     gridToDev(gTree, svgdev)
     devClose(svgdev)

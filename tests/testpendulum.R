@@ -1,7 +1,7 @@
 library(grid)
 library(gridSVG)
 
-x11(width=6, height=6)
+dev.new(width=6, height=6)
 
 grid.newpage()
 # Some default settings

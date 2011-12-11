@@ -3,7 +3,7 @@ library(grid)
 library(gridSVG)
 
 # A very simple test
-x11(width=6, height=6)
+dev.new(width=6, height=6)
 # Some default settings
 pushViewport(viewport(gp=gpar(col="black", fill=NA)))
 grid.text("Click me", name="txtgrob")
@@ -20,7 +20,7 @@ dev.off()
 data(iris)
 
 # A scatterplot of x vs y
-x11(width=6, height=6)
+dev.new(width=6, height=6)
 # Some default settings
 pushViewport(viewport(gp=gpar(col="black", fill=NA)))
 pushViewport(plotViewport(c(5, 5, 4, 2)))
@@ -28,8 +28,8 @@ pushViewport(dataViewport(iris$Sepal.Length, iris$Sepal.Width))
 grid.rect()
 grid.xaxis(name="xaxis")
 grid.yaxis(name="yaxis")
-grid.hyperlink("xaxis", "dotx.html")
-grid.hyperlink("yaxis", "doty.html")
+grid.hyperlink("xaxis", "linkdotx.svg.html")
+grid.hyperlink("yaxis", "linkdoty.svg.html")
 grid.points(iris$Sepal.Length[iris$Species == "setosa"],
             iris$Sepal.Width[iris$Species == "setosa"],
             gp=gpar(col="red"))
@@ -46,7 +46,7 @@ gridToSVG("linkscatter.svg")
 dev.off()
 
 # A dot plot of x
-x11(width=6, height=3)
+dev.new(width=6, height=3)
 # Some default settings
 pushViewport(viewport(gp=gpar(col="black", fill=NA)))
 pushViewport(plotViewport(c(5, 2, 4, 2)))
@@ -70,13 +70,13 @@ grid.text(name="returnlink",
           "Return to Scatterplot",
           y=unit(1, "npc") + unit(1, "lines"),
           gp=gpar(col="grey"))
-grid.hyperlink("returnlink", "slide17.html")
+grid.hyperlink("returnlink", "linkscatter.svg.html")
 popViewport(3)
 gridToSVG("linkdotx.svg")
 dev.off()
 
 # A dot plot of y
-x11(width=6, height=3)
+dev.new(width=6, height=3)
 # Some default settings
 pushViewport(viewport(gp=gpar(col="black", fill=NA)))
 pushViewport(plotViewport(c(5, 2, 4, 2)))
@@ -100,9 +100,42 @@ grid.text(name="returnlink",
           "Return to Scatterplot",
           y=unit(1, "npc") + unit(1, "lines"),
           gp=gpar(col="grey"))
-grid.hyperlink("returnlink", "slide17.html")
+grid.hyperlink("returnlink", "linkscatter.svg.html")
 popViewport(3)
 gridToSVG("linkdoty.svg")
 dev.off()
 
 
+# Check link to overall grob works
+
+grid.newpage()
+grid.draw(hyperlinkGrob(linesGrob(gp=gpar(lwd=20)),
+                        href="http://www.stat.auckland.ac.nz"))
+gridToSVG("testGroupOfOneHyperlink.svg")
+
+grid.newpage()
+grid.draw(hyperlinkGrob(segmentsGrob(1:3/4, gp=gpar(lwd=20)),
+                        href="http://www.stat.auckland.ac.nz"))
+gridToSVG("testGroupOfManyHyperlink.svg")
+
+# Test *individual* hrefs
+
+grid.newpage()
+grid.draw(hyperlinkGrob(linesGrob(gp=gpar(lwd=20)),
+                        href="http://www.stat.auckland.ac.nz",
+                        group=FALSE))
+gridToSVG("testIndividualOneHyperlink.svg")
+
+grid.newpage()
+grid.draw(hyperlinkGrob(segmentsGrob(1:3/4, gp=gpar(lwd=20)),
+                        href="http://www.stat.auckland.ac.nz",
+                        group=FALSE))
+gridToSVG("testIndividualManyHyperlink.svg")
+
+grid.newpage()
+grid.draw(hyperlinkGrob(segmentsGrob(1:3/4, gp=gpar(lwd=20)),
+                        href=c("http://www.stat.auckland.ac.nz",
+                          "http://slashdot.org",
+                          "http://soccernet.com"),
+                        group=FALSE))
+gridToSVG("testIndividualManyHyperlinks.svg")

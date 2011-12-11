@@ -1,4 +1,41 @@
 
+Changes from 0.8-0 to 0.9-0
+===========================
+
+1.  Added dependency on R >= 2.13.0
+
+    (grid.grab(wrap=TRUE) only works with bug fix in r54813).
+
+2.  Replaced partially matching arguments with full argument names. (Simon)
+
+3.  Added plotmath support (outputs MathML).
+
+    Note that positioning of MathML output is VERY unlikely to
+    be accurate because there is not only the problem of font
+    differences BUT ALSO the problem of a different math
+    formula layout engine!
+
+4.  Changed x11() to dev.new() in tests/*.R code.
+
+5.  Added animation support for polygon grobs and path grobs.
+
+6.  Changed translation of rastergrob grobs to SVG elements.
+    They are now an <image> wrapped in two <g>s.
+    The outer <g> provides a translation;  the inner <g> provides
+    a scaling;  and the image is at (0, 0) and size (1, 1).
+    This allows for ...
+
+7.  Added animation support for rastergrob grobs.
+
+8.  Added animation support for xspline grobs.
+
+    Note that closed xsplines are unlikely to animate smoothly
+    (because the result is an animated <path> with a variable 
+     number of operations).
+
+9.  Added 'group' argument for grid.hyperlink().
+
+
 Changes from 0.7-0 to 0.8-0
 ===========================
 

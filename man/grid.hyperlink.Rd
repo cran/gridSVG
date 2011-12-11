@@ -10,16 +10,20 @@
   hyperlinked graphical elements.
 }
 \synopsis{
-hyperlinkGrob(x, href)
-grid.hyperlink(path, href)
+hyperlinkGrob(x, href, group=TRUE)
+grid.hyperlink(path, href, group=TRUE)
   }
 \usage{
-grid.hyperlink(path, href)
+grid.hyperlink(path, href, group)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{path}{ A grob path specifying a drawn grob. }
-  \item{href}{ A valid Xlink URI }
+  \item{href}{ A valid Xlink URI.  Can be a vector of several links
+    (see \code{group} argument below). }
+  \item{group}{ A logical indicating whether the hyperlinks
+    should be attached to the overall parent group for the
+    relevant SVG element, or to individual SVG elements. }
 }
 \value{
   A linked.grob object.

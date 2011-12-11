@@ -3,7 +3,14 @@ svgOpen <- function(filename="Rplots.svg", width=200, height=200) {
   # For viewing using Adobe SVG Viewer in IE
   # OR in Firefox 3 (native support)
   # create a "wrapper" html file
+    # NOTE that for including plotmath output (as MathML), may
+    # need to use the right sort of headers.
+    # See ~/Research/Rstuff/SVG/PlotMath/README for notes from some
+    # experiments AND email from David Scott that contains an
+    # example from org-babel output 2011-11-01
   htmlfile <- file(paste(filename, ".html", sep=""), "w")
+  # NOTE that different browsers prefer different approaches
+  # See email from David Scott 2011-11-03 for some sample code
   cat(paste('<object data="', filename, '" type="image/svg+xml"',
             ' width="', ceiling(width), 'px" height="', ceiling(height), 'px"> </object>\n',
             sep=''), file=htmlfile)
@@ -49,21 +56,32 @@ svgClipAttr <- function(id, clip) {
 }
 
 svgStartGroup <- function(id=NULL, clip=FALSE,
-                          attributes=svgAttrib(),
+                          attributes=svgAttrib(), links=NULL,
                           style=svgStyle(), svgdev=svgDevice()) {
   incindent(svgdev)
+  if (!is.null(id)) {
+      link <- links[id]
+      if (!(is.null(link) || is.na(link)))
+          svgStartLink(link, svgdev)
+  }
   catsvg(paste('<g ',
                'id="', getid(id, svgdev), '" ',
                svgAttribTxt(attributes, id), ' ',
                svgClipAttr(id, clip),
                svgStyleAttributes(style), 
                '>\n',
-               sep=""), svgdev)
+               sep=""),
+         svgdev)
   incID(svgdev)
 }
 
-svgEndGroup <- function(svgdev=svgDevice()) {
+svgEndGroup <- function(id=NULL, links=NULL, svgdev=svgDevice()) {
   catsvg('</g>\n', svgdev)
+  if (!is.null(id)) {
+      link <- links[id]
+      if (!(is.null(link) || is.na(link)))
+          svgEndLink(svgdev)
+  }
   decindent(svgdev)
 }
 
@@ -130,7 +148,7 @@ lpaste <- function(alist, collapse) {
   paste(result, collapse=collapse)
 }
 
-svgAnimatePoints <- function(xvalues, yvalues, pointsid,
+svgAnimatePoints <- function(xvalues, yvalues, timeid,
                              begin, interp, duration, rep, revert,
                              id=NULL,
                              svgdev=svgDevice()) {
@@ -140,10 +158,39 @@ svgAnimatePoints <- function(xvalues, yvalues, pointsid,
     svgAnimate("points",
                 paste(lapply(split(paste(round(xvalues, 2),
                                          round(yvalues, 2), sep=","),
-                                   pointsid),
+                                   timeid),
                              paste, collapse=" "),
                       collapse=";"),
                begin, interp, duration, rep, revert, id, svgdev)  
+}
+
+svgAnimatePath <- function(xvalues, yvalues, pathid, timeid,
+                           begin, interp, duration, rep, revert,
+                           id=NULL,
+                           svgdev=svgDevice()) {
+  if (is.null(id))
+    warning("Not sure what this animation means?")
+  else {
+      # Split into time segments
+      x <- split(xvalues, timeid)
+      y <- split(yvalues, timeid)
+      pid <- split(pathid, timeid)
+      d <- mapply(function(xtime, ytime, pid) {
+                      # Split into path components
+                      xx <- split(xtime, pid)
+                      yy <- split(ytime, pid)
+                      txt <- mapply(function(x, y) {
+                                        paste(paste(c("M",
+                                                      rep("L", length(x) - 1)),
+                                                    round(x, 2), round(y, 2),
+                                                    collapse=" "),
+                                              "Z")
+                                    }, xx, yy)
+                      paste(unlist(txt), collapse=" ")
+                  }, x, y, pid)
+      svgAnimate("d", paste(d, collapse=";"),
+                 begin, interp, duration, rep, revert, id, svgdev)      
+  }
 }
 
 svgAnimateTransform <- function(attrib, values,
@@ -180,8 +227,19 @@ svgAnimateTranslation <- function(xvalues, yvalues,
                       begin, interp, duration, rep, revert, id, svgdev)  
 }
 
+svgAnimateScale <- function(xvalues, yvalues,
+                            begin, interp, duration, rep, revert,
+                            id=NULL,
+                            svgdev=svgDevice()) {
+  svgAnimateTransform("scale",
+                      paste(round(xvalues, 2),
+                            round(yvalues, 2),
+                            sep=",", collapse=';'),
+                      begin, interp, duration, rep, revert, id, svgdev)  
+}
+
 svgLines <- function(x, y, id=NULL, arrow = NULL,
-                     attributes=svgAttrib(),
+                     attributes=svgAttrib(), links=NULL,
                      style=svgStyle(), svgdev=svgDevice()) {
 
   # Grabbing arrow info for marker element references
@@ -204,7 +262,8 @@ svgLines <- function(x, y, id=NULL, arrow = NULL,
                svgAttribTxt(attributes, id), ' ',
                svgStyleAttributes(style), 
                ' />\n', sep=""),
-         svgdev)  
+         svgdev,
+         link=links[id])  
 }
 
 svgMarker <- function(x, y, type, ends, name,
@@ -284,7 +343,7 @@ markerName <- function(ends, name) {
 }
 
 svgPolygon <- function(x, y, id=NULL,
-                       attributes=svgAttrib(),
+                       attributes=svgAttrib(), links=NULL,
                        style=svgStyle(), svgdev=svgDevice()) {
   if (length(x) != length(y))
     stop("x and y must be same length")
@@ -299,12 +358,12 @@ svgPolygon <- function(x, y, id=NULL,
                svgAttribTxt(attributes, id), ' ',
                svgStyleAttributes(style), 
                ' />\n', sep=""),
-         svgdev)  
+         svgdev, link=links[id])  
 }
 
 # Differs from polygon because it can have sub-paths
 svgPath <- function(x, y, rule, id=NULL,
-                    attributes=svgAttrib(),
+                    attributes=svgAttrib(), links=NULL,
                     style=svgStyle(), svgdev=svgDevice()) {
     if (length(x) != length(y))
         stop("x and y must be same length")
@@ -317,8 +376,7 @@ svgPath <- function(x, y, rule, id=NULL,
         }
     }
     n <- length(x)
-    d <- mapply(
-                function(subx, suby) {
+    d <- mapply(function(subx, suby) {
                     paste(paste(c("M",
                                   rep("L", length(subx) - 1)),
                                 round(subx, 2), round(suby, 2),
@@ -334,37 +392,47 @@ svgPath <- function(x, y, rule, id=NULL,
                  svgAttribTxt(attributes, id), ' ',
                  svgStyleAttributes(style), 
                  ' />\n', sep=""),
-           svgdev)  
+           svgdev, link=links[id])  
 }
 
 svgRaster <- function(x, y, width, height, id=NULL,
                       just, vjust, hjust,
-                      attributes=svgAttrib(), 
+                      attributes=svgAttrib(), links=NULL,
                       style=svgStyle(), svgdev=svgDevice()) {
 
   # Need to extract the original grob name in order to link to the image
   grobname <- baseGrobName(id)
   fileloc <- paste(grobname, ".png", sep = "")
 
-  rasters <- paste('<image ',
+  rasters <- paste('<g ',
                    'id="', id, '" ',
-                   'x="', round(x, 2), '" ',
-                   'y="', round(y, 2), '" ',
-                   'width="', round(width, 2), '" ',
-                   'height="', round(height, 2), '" ',
-                   'xlink:href="', fileloc, '" ',
-                   # Flipping image vertically to correct orientation
-                   'transform="translate(0, ',  round(height + (2 * y), 2), ') scale(1, -1)" ',
+                   # Attributes applied to group
                    svgAttribTxt(attributes, id), ' ',
-                   svgStyleAttributes(style),
+                   svgStyleAttributes(style), ' ',
+                   # Flip image vertically to correct orientation
+                   'transform="translate(',
+                   round(x, 2), ', ',
+                   round(height + y, 2), ') ',
+                   '">\n',
+                   '<g ',
+                   'id="', paste(id, "scale", sep="."), '" ',
+                   'transform="scale(',
+                   round(width, 2), ', ',
+                   round(-height, 2), ')',
+                   '">\n',
+                   '<image ',
+                   'x="0" y="0" width="1" height="1" ', 
+                   'xlink:href="', fileloc, '" ',
                    ' />\n',
+                   '</g>\n',
+                   '</g>\n',
                    sep="")
-
-  catsvg(rasters, svgdev)
+  
+  catsvg(rasters, svgdev, link=links[id])
 }
 
 svgRect <- function(x, y, width, height, id=NULL,
-                    attributes=svgAttrib(), 
+                    attributes=svgAttrib(), links=NULL,
                     style=svgStyle(), svgdev=svgDevice()) {
   rects <- paste('<rect ',
                  'id="', id, '" ',
@@ -376,55 +444,7 @@ svgRect <- function(x, y, width, height, id=NULL,
                  svgStyleAttributes(style),
                  ' />\n',
                  sep="")
-  catsvg(rects, svgdev)
-}
-
-svgText <- function(x, y, text, hjust="left", vjust="bottom", rot=0,
-                    lineheight=1, charheight=.8,
-                    id=NULL, attributes=svgAttrib(), 
-                    style=svgStyle(), svgdev=svgDevice()) {
-    # Avoid XML specials in text
-    text <-
-        gsub("<", "&lt;",
-             gsub(">", "&gt;",
-                  gsub("'", "&apos;",
-                       gsub("\"", "&quot;",
-                            # DO & FIRST !!!!
-                            gsub("&", "&amp;",
-                                      text)))))
-
-    # Flip the y-direction again so that text is drawn "upright"
-    # Do the flip in a separate <g> so that can animate the
-    # translation easily
-    # Use a tspan to do the vertical alignment
-    texts <- paste('<g ',
-                   'id="', id, '" ',
-                   # Attributes applied to group
-                   svgAttribTxt(attributes, id), ' ',
-                   # Only draw a REALLY thin line for the text outline
-                   'stroke-width=".1" ',
-                   'transform="translate(',
-                   round(x, 2), ', ',
-                   round(y, 2), ') ',
-                   '">\n',
-                   '<g transform="scale(1, -1)">\n',
-                   '<text x="0" y="0" ',
-                   if (rot != 0) {
-                       paste('transform="rotate(',
-                             # Rotation in SVG goes clockwise from +ve x=axis
-                             round(-rot, 2),
-                             ')" ', sep="")
-                   } else "",
-                   textAnchor(hjust), ' ',
-                   svgStyleAttributes(style),
-                   ' >\n',
-                   svgTextSplitLines(text, lineheight, charheight, vjust),
-                   '</text>\n',
-                   '</g>\n',
-                   '</g>\n',
-                   sep="")
-
-    catsvg(texts, svgdev)
+  catsvg(rects, svgdev, link=links[id])
 }
 
 svgTextSplitLines <- function(text, lineheight, charheight, vjust) {
@@ -460,8 +480,127 @@ svgTextSplitLines <- function(text, lineheight, charheight, vjust) {
     svgText
 }
 
+svgTextElement <- function(text, rot, hjust, vjust,
+                           lineheight, charheight, style) {
+    paste('<text x="0" y="0" ',
+          if (rot != 0) {
+              paste('transform="rotate(',
+                    # Rotation in SVG goes clockwise from +ve x=axis
+                    round(-rot, 2),
+                    ')" ', sep="")
+          } else "",
+          textAnchor(hjust), ' ',
+          svgStyleAttributes(style),
+          ' >\n',
+          svgTextSplitLines(text, lineheight, charheight, vjust),
+          '</text>\n',
+          sep="")
+}
+
+# NOTE that the precise placement of math is even less likely to work
+# than normal text.  Besides the problem of the browser using a
+# different font (which is more likely because a math expression
+# typically uses multiple fonts), the web browser will be using
+# a different formula layout engine compared to R so things like
+# the spacing between operators will be different.
+# One particular problem is that R justifies math formulas
+# relative to the bounding box of the formula, whereas it
+# appears that Firefox at least justifies relative to the formula
+# baseline (just from observation).
+# The code below tries to do something rational by making use
+# of finer detail metric information for the formula
+# to mimic R's vertical justification.  
+svgMathElement <- function(text, rot, hjust, vjust,
+                           width, height, ascent, descent,
+                           lineheight, charheight, fontheight,
+                           fontfamily, fontface, style) {
+    # Determine x/y based on width/height and hjust/vjust
+    if (hjust %in% c("centre", "center"))
+        x <- -width/2
+    if (hjust == "left")
+        x <- 0
+    if (hjust == "right")
+        x <- -width
+    if (vjust %in% c("centre", "center"))
+        y <- -(max(ascent, fontheight) + descent)/2
+    if (vjust == "bottom")
+        y <- -(max(ascent, fontheight) + descent)
+    if (vjust == "top") {
+        if (fontheight > ascent)
+            y <- -(fontheight - ascent)
+        else
+            y <- (ascent - fontheight)
+    }
+    # Adjust exact width/height up by large fudge factor to allow for
+    # larger fonts and different layout in viewer
+    # Hopefully there are no downsides to that approach ...
+    paste('<foreignObject x="', round(x, 2),
+                       '" y="', round(y, 2),
+                       '" width="', round(3*width, 2),
+                       '" height="', round(3*height, 2), '" ',
+          if (rot != 0) {
+              paste('transform="rotate(',
+                    # Rotation in SVG goes clockwise from +ve x=axis
+                    round(-rot, 2),
+                    ')" ', sep="")
+          } else "",
+          svgStyleAttributes(style),
+          ' >\n',
+          expr2mml(text, fontfamily, fontface),
+          '</foreignObject>\n',
+          sep="")
+}
+
+svgText <- function(x, y, text, hjust="left", vjust="bottom", rot=0,
+                    width=1, height=1, ascent=1, descent=0,
+                    lineheight=1, charheight=.8, fontheight=1,
+                    fontfamily="sans", fontface="plain",
+                    id=NULL, attributes=svgAttrib(), links=NULL,
+                    style=svgStyle(), svgdev=svgDevice()) {
+    # Avoid XML specials in text
+    if (!is.language(text))
+        text <-
+            gsub("<", "&lt;",
+                 gsub(">", "&gt;",
+                      gsub("'", "&apos;",
+                           gsub("\"", "&quot;",
+                                # DO & FIRST !!!!
+                                gsub("&", "&amp;",
+                                     text)))))
+
+    # Flip the y-direction again so that text is drawn "upright"
+    # Do the flip in a separate <g> so that can animate the
+    # translation easily
+    # Use a tspan to do the vertical alignment
+    texts <- paste('<g ',
+                   'id="', id, '" ',
+                   # Attributes applied to group
+                   svgAttribTxt(attributes, id), ' ',
+                   # Only draw a REALLY thin line for the text outline
+                   'stroke-width=".1" ',
+                   'transform="translate(',
+                   round(x, 2), ', ',
+                   round(y, 2), ') ',
+                   '">\n',
+                   '<g transform="scale(1, -1)">\n',
+                   if (is.language(text)) {
+                       svgMathElement(text, rot, hjust, vjust,
+                                      width, height, ascent, descent,
+                                      lineheight, charheight, fontheight,
+                                      fontfamily, fontface, style)
+                   } else {
+                       svgTextElement(text, rot, hjust, vjust,
+                                      lineheight, charheight, style)
+                   },
+                   '</g>\n',
+                   '</g>\n',
+                   sep="")
+
+    catsvg(texts, svgdev, link=links[id])
+}
+
 svgCircle <- function(x, y, r, id=NULL,
-                      attributes=svgAttrib(), 
+                      attributes=svgAttrib(), links=NULL,
                       style=svgStyle(), svgdev=svgDevice()) {
 
   circles <- paste('<circle ',
@@ -474,7 +613,7 @@ svgCircle <- function(x, y, r, id=NULL,
                    ' />\n',
                    sep="")
 
-  catsvg(circles, svgdev)
+  catsvg(circles, svgdev, link=links[id])
 }
 
 svgScript <- function(body, href, type="text/ecmascript",
@@ -547,9 +686,17 @@ svgID <- function(svgdev) {
 }
 
 # SVG output
-catsvg <- function(text, svgdev) {
-  cat(paste(get("indent", env=svgdev), text, sep=""),
-      file=svgDevFile(svgdev))
+# This guy can optionally add an <a> element around the output
+catsvg <- function(text, svgdev, link=NULL) {
+    hasLink <- !(is.null(link) || is.na(link))
+    if (hasLink) {
+        svgStartLink(link, svgdev)
+    }
+    cat(paste(get("indent", env=svgdev), text, sep=""),
+        file=svgDevFile(svgdev))
+    if (hasLink) {
+        svgEndLink(svgdev)
+    }
 }
 
 decindent <- function(svgdev) {

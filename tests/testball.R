@@ -2,7 +2,6 @@ library(grid)
 library(lattice)
 library(gridSVG)
 
-# x11(width=6, height=6)
 postscript(width=8, height=6, paper="special")
 
 # Some default settings

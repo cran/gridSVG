@@ -252,6 +252,243 @@ grid.animate("segments",
              duration=3)
 gridToSVG("anim-segments-complex.svg")
 
+# Animating polygons
+
+# Simple case
+# (polygon only has three points,
+#  animation only has two points, only animate x)
+grid.newpage()
+grid.text("Single polygon slides to the right",
+          y=unit(1, "lines"))
+grid.rect()
+grid.polygon(c(.1, .2, .3),
+              c(.4, .6, .4), name="polygon")
+grid.animate("polygon",
+             x=animUnit(unit(c(.1, .2, .3,
+                               .7, .8, .9),
+                             unit="npc"),
+                        timeid=rep(1:2, each=3)),
+             duration=3)
+gridToSVG("anim-polygon-simple.svg")
+
+# Complex case
+# (two polygons, animation has many points, animate x and y)
+grid.newpage()
+grid.text("Two polygons shrink and grow (flipped) then revert",
+          y=unit(1, "lines"))
+grid.rect()
+grid.polygon(c(.2, .3, .4,
+               .6, .7, .8),
+             c(.4, .6, .4, .6, .4, .6),
+             id=rep(1:2, each=3), name="polygon")
+grid.animate("polygon",
+             x=animUnit(unit(c(.2, .3, .4,
+                               .4, .3, .2,
+                               .2, .3, .4,
+ 
+                               .6, .7, .8,
+                               .8, .7, .6,
+                               .6, .7, .8),
+                             "npc"),
+                        id=rep(1:2, each=9),
+                        timeid=rep(rep(1:3, each=3), 2)),
+             y=animUnit(unit(c(.4, .6, .4,
+                               .6, .4, .6,
+                               .4, .6, .4,
+                               
+                               .6, .4, .6,
+                               .4, .6, .4,
+                               .6, .4, .6),
+                             "npc"),
+                        id=rep(1:2, each=9),
+                        timeid=rep(rep(1:3, each=3), 2)),
+             duration=5)
+gridToSVG("anim-polygon-complex.svg")
+
+# Animating paths
+
+# Simple case
+# (path has one sub-path,
+#  animation only has two points, only animate x)
+grid.newpage()
+grid.text("Single simple path (triangle) slides to the right",
+          y=unit(1, "lines"))
+grid.rect()
+grid.path(c(.1, .2, .3),
+          c(.4, .6, .4),
+          gp=gpar(fill="black"),
+          name="path")
+grid.animate("path",
+             x=animUnit(unit(c(.1, .2, .3,
+                               .7, .8, .9),
+                             unit="npc"),
+                        timeid=rep(1:2, each=3)),
+             duration=3)
+gridToSVG("anim-path-simple.svg")
+
+# Complex case
+# (two polygons, animation has many points, animate x and y)
+grid.newpage()
+grid.text("Single complex path transmogrifies as it slides to the right",
+          y=unit(1, "lines"))
+grid.rect()
+grid.path(c(.1, .1, .4, .4,
+            .2, .2, .3, .3),
+          c(.2, .8, .8, .2,
+            .4, .6, .6, .4),
+          id=rep(1:2, each=4),
+          rule="evenodd",
+          gp=gpar(fill="black"),
+          name="path")
+grid.animate("path",
+             x=animUnit(unit(c(.1, .1, .4, .4,
+                               .2, .2, .3, .3,
+
+                               .35, .35, .65, .65,
+                               .45, .45, .55, .55,
+               
+                               .6, .6, .9, .9,
+                               .7, .7, .8, .8),
+                             unit="npc"),
+                        id=rep(rep(1:2, each=4), 3),
+                        timeid=rep(1:3, each=8)),
+             y=animUnit(unit(c(.2, .8, .8, .2,
+                               .4, .6, .6, .4,
+
+                               .4, .6, .6, .4,
+                               .2, .8, .8, .2,
+
+                               .2, .8, .8, .2,
+                               .4, .6, .6, .4),
+                             unit="npc"),
+                        id=rep(rep(1:2, each=4), 3),
+                        timeid=rep(1:3, each=8)),               
+             duration=3)
+gridToSVG("anim-path-complex.svg")
+
+# Simple case
+# (single raster, anim only x, anim values are just numeric)
+grid.newpage()
+grid.text("One raster moves across",
+          y=unit(1, "lines"))
+grid.rect()
+grid.raster(1:10/11, x=.2, y=.2, width=.1, height=.1, name="raster")
+grid.animate("raster", x=c(.2, .8), duration=3)
+gridToSVG("anim-raster-simple.svg")
+
+# Complex case
+# (multiple rasters, anim x/y/width/height, anim values are matrices and lists)
+grid.newpage()
+grid.text("Three rasters: one goes up, one goes across, and
+one goes diagonal and gets smaller",
+          y=unit(1, "lines"))
+grid.rect()
+grid.raster(1:10/11, x=rep(.2, 3), y=.2, width=.1, height=.1, name="raster")
+grid.animate("raster",
+             x=cbind(c(.2, .8), c(.2, .8), .2),
+             y=cbind(.2, c(.2, .8), c(.2, .8)),
+             width=list(unit(.1, "npc"),
+               unit(c(.1, 1), c("npc", "cm")),
+               unit(.1, "npc")),
+             height=list(unit(.1, "npc"),
+               unit(c(.1, 1), c("npc", "cm")),
+               unit(.1, "npc")),             
+             duration=3)
+gridToSVG("anim-raster-complex.svg")
+
+# Simple case
+# (single xspline, anim only x, anim values are just numeric)
+grid.newpage()
+grid.text("Two xsplines move across",
+          y=unit(1, "lines"))
+grid.rect()
+grid.xspline(c(.3, .1, .5, .3),
+             c(.2, .5, .5, .2),
+             open=TRUE, shape=1,
+             name="xspline-1")
+grid.xspline(c(.3, .1, .5),
+             c(.6, .9, .9),
+             open=FALSE, shape=1,
+             gp=gpar(fill="grey"),
+             name="xspline-2")
+grid.animate("xspline-1",
+             x=animUnit(unit(c(.3, .1, .5, .3,
+                               .7, .5, .9, .7),
+                             "npc"),
+                        timeid=rep(1:2, each=4)),
+             duration=3)
+grid.animate("xspline-2",
+             x=cbind(c(.3, .1, .5),
+                     c(.7, .5, .9)),
+             duration=3)
+gridToSVG("anim-xspline-simple.svg")
+
+# Complex case
+# (four xsplines, animation has many points, animate x and y)
+grid.newpage()
+grid.text("Four xsplines shrink and grow (flipped) then revert",
+          y=unit(1, "lines"))
+grid.rect()
+grid.xspline(c(.3, .1, .5, .3,
+               .7, .5, .9, .7),
+             c(.2, .5, .5, .2,
+               .2, .5, .5, .2),
+             shape=1,
+             id=rep(1:2, each=4), name="xspline-open")
+grid.xspline(c(.3, .1, .5,
+               .7, .5, .9),
+             c(.6, .9, .9,
+               .6, .9, .9),
+             open=FALSE, shape=1,
+             gp=gpar(fill="grey"),
+             id=rep(1:2, each=3), name="xspline-closed")
+grid.animate("xspline-open",
+             x=animUnit(unit(c(.3, .1, .5, .3,
+                               .5, .3, .7, .5,
+                               .7, .5, .9, .7,
+
+                               .7, .5, .9, .7,
+                               .5, .3, .7, .5,
+                               .3, .1, .5, .3),
+                             "npc"),
+                        id=rep(1:2, each=12),
+                        timeid=rep(rep(1:3, each=4), 2)),
+             y=animUnit(unit(c(.2, .5, .5, .2,
+                               .5, .2, .2, .5,
+                               .2, .5, .5, .2,
+               
+                               .2, .5, .5, .2,
+                               .5, .2, .2, .5,
+                               .2, .5, .5, .2),
+                             "npc"),
+                        id=rep(1:2, each=12),
+                        timeid=rep(rep(1:3, each=4), 2)),
+             duration=5)
+grid.animate("xspline-closed",
+             x=animUnit(unit(c(.3, .1, .5,
+                               .5, .3, .7,
+                               .7, .5, .9,
+
+                               .7, .5, .9,
+                               .5, .3, .7,
+                               .3, .1, .5),
+                             "npc"),
+                        id=rep(1:2, each=9),
+                        timeid=rep(rep(1:3, each=3), 2)),
+             y=animUnit(unit(c(.6, .9, .9,
+                               .9, .6, .6,
+                               .6, .9, .9,
+
+                               .6, .9, .9,
+                               .9, .6, .6,
+                               .6, .9, .9),
+                             "npc"),
+                        id=rep(1:2, each=9),
+                        timeid=rep(rep(1:3, each=3), 2)),
+             duration=5)
+gridToSVG("anim-xspline-complex.svg")
+
+
 ############################################
 
 # Multiple animations on same grob
