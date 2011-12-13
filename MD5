@@ -1,4 +1,4 @@
-ea9fd5f384d30fd314e868c4c68a2ec1 *DESCRIPTION
+966aa90c6360255d1b7611e89cf416f4 *DESCRIPTION
 5f6b059d1496d7bfaee567e6ca0e67db *NAMESPACE
 3782ea03b2992156b0c643c6c2abf771 *R/MathML.R
 a05f7d846725529f0f41dc803e6db02e *R/aaa.R
@@ -13,12 +13,12 @@ cb8a6d03107927fb640cd2e391f0be03 *R/script.R
 15b39950a84bac26490c9f24a1b680cc *R/svg.R
 bce6db2a4c44cec3c4d69c2da2783d1e *R/zzz.R
 c207647e16fc16faf08173df2d3fd643 *inst/doc/animation.Rnw
-d0ee053cc1111b43e72a07cc37913b45 *inst/doc/animation.pdf
+4165a3be8ff4f737da8f74d262f5dcab *inst/doc/animation.pdf
 9bbd398d3dad2a4edb871d9568e08e79 *inst/doc/changes.txt
 d799539d0629843c3a5c583641c34dcc *inst/doc/extensibility.Rnw
-cf55f31694bee1870d4849b7958b5f00 *inst/doc/extensibility.pdf
+196398c114f02073535682623d8a5e5d *inst/doc/extensibility.pdf
 e019ea7dc398b352a803cf3a28e53ecb *inst/doc/gridSVG.Snw
-8eb63c2264553965205ce4fa9c447e2c *inst/doc/gridSVG.pdf
+05e0cc01e64c60bbf649fd5cd54d3c29 *inst/doc/gridSVG.pdf
 ef61d9ef7e2e7b3eb326019306280208 *man/animUnit.Rd
 29c0d2f90071c2a4c1a544c7a3e862a9 *man/animate.Rd
 6c9676a8578d9f32192c5f79a2e84ee9 *man/garnish.Rd
