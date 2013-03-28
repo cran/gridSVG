@@ -36,12 +36,28 @@ export("grid.hyperlink",
        "hyperlinkGrob",
        "grid.animate",
        "animateGrob",
+       "grid.comment",
+       "commentGrob",
        "grid.garnish",
        "garnishGrob",
        "grid.script",
        "scriptGrob",
        "gridToSVG"
        )
+
+export("getSVGoption",
+       "getSVGoptions",
+       "setSVGoptions")
+
+export("gridSVGCoords",
+       "readCoordsJS",
+       "viewportCreate",
+       "viewportConvertX",
+       "viewportConvertY",
+       "viewportConvertWidth",
+       "viewportConvertHeight")
+
+useDynLib("gridSVG")
 
 # So other PACKAGES can write translation methods for new grobs
 export("grobToDev")
@@ -50,6 +66,7 @@ export("animate")
 export("garnish")
 
 S3method("grobToDev", "grob")
+S3method("grobToDev", "roundrect")
 S3method("grobToDev", "gTree")
 S3method("grobToDev", "frame")
 S3method("grobToDev", "cellGrob")
@@ -57,8 +74,15 @@ S3method("grobToDev", "recordedGrob")
 # S3method("grobToDev", "linked.grob")
 S3method("grobToDev", "script.grob")
 
+# gtable fixes
+S3method("grobToDev", "gtable")
+S3method("grobToDev", "gTableChild")
+S3method("grobToDev", "gTableParent")
+
 S3method("primToDev", "grob")
 S3method("primToDev", "gTree")
+S3method("primToDev", "move.to")
+S3method("primToDev", "line.to")
 S3method("primToDev", "lines")
 S3method("primToDev", "rastergrob")
 S3method("primToDev", "rect")
@@ -74,10 +98,13 @@ S3method("primToDev", "xspline")
 
 S3method("primToDev", "linked.grob")
 S3method("primToDev", "animated.grob")
+S3method("primToDev", "comment.grob")
 S3method("primToDev", "garnished.grob")
 
 S3method("link", "grob")
 S3method("link", "gTree")
+S3method("linkShow", "grob")
+S3method("linkShow", "gTree")
 
 S3method("animate", "grob")
 S3method("animate", "gTree")

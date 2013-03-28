@@ -1,5 +1,5 @@
 
-scriptGrob <- function(script=NULL, filename=NULL, type="text/ecmascript",
+scriptGrob <- function(script=NULL, filename=NULL, type="application/ecmascript",
                        inline=FALSE, name=NULL) {
     body <- ""
     href <- ""

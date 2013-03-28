@@ -10,12 +10,12 @@
   script elements.
 }
 \synopsis{
-scriptGrob(script=NULL, filename=NULL, type="text/ecmascript",
+scriptGrob(script=NULL, filename=NULL, type="application/ecmascript",
            inline=FALSE, name=NULL)
 grid.script(...)  
   }
 \usage{
-grid.script(script=NULL, filename=NULL, type="text/ecmascript",
+grid.script(script=NULL, filename=NULL, type="application/ecmascript",
             inline=FALSE, name=NULL)
 }
 %- maybe also 'usage' for other objects documented here.

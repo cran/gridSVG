@@ -258,7 +258,8 @@ ithValue <- function(animValues, i) {
 # RETURN a UNIT
 ithUnit <- function(animValues, origValue, i) {
     au <- as.animUnit(animValues,
-                      unit=attr(origValue, "unit"))
+                      # Only take the first "unit" value
+                      unit=attr(origValue, "unit")[1])
     if (!is.null(au$timeid))
         stop("Expecting only one value per time point")
     if (is.null(au$id))
@@ -288,7 +289,8 @@ ithAnimValue <- function(animValues, i) {
 # RETURN an ANIMUNIT
 ithAnimUnit <- function(animValues, origValue, i) {
     au <- as.animUnit(animValues,
-                      unit=attr(origValue, "unit"),
+                      # Only take the first "unit" value
+                      unit=attr(origValue, "unit")[1],
                       multVal=TRUE)
     if (is.null(au$timeid))
         stop("Expecting multiple values per time point")
@@ -321,6 +323,13 @@ ithAnimUnit <- function(animValues, origValue, i) {
 #         animate sets of values
 #         animate anything else
 
+######################
+
+######################
+# FIXME:
+# When animating some cobination x/y/width/height/size AT THE SAME TIME
+# the code below only makes sense if the number of time periods
+# is the same for all of x/y/width/height/size (that are being animated)
 ######################
 
 applyAnimation.rect <- function(x, animSet, animation, group, dev) {
@@ -371,7 +380,7 @@ applyAnimation.rect <- function(x, animSet, animation, group, dev) {
         heighti <- ithUnit(animSet$animations$height, x$height, i)
     else
         heighti <- x$height[i]
-    lb <- leftbottom(xi, yi, widthi, heighti, x$just, dev)
+    lb <- leftbottom(xi, yi, widthi, heighti, x$just, x$hjust, x$vjust, dev)
     
     switch(animation,
            x={
@@ -515,6 +524,13 @@ applyAnimation.points <- function(x, animSet, animation, group, dev) {
   x$pch <- rep(x$pch, length.out = n)
   x$size <- rep(x$size, length.out = n)
 
+  # Need to grab the lwd so that we can keep line thickness the same
+  # as we change the size of a point
+  sw <- if (! is.null(x$gp$lwd)) x$gp$lwd
+        else get.gpar()$lwd
+  sw <- rep(devLwdToSVG(sw, dev), length.out = n)
+  sw <- as.numeric(gsub("px", "", sw))
+
   # Repeating animation parameters so that each element can have
   # distinct values
   begin <- rep(animSet$begin, length.out = n)
@@ -538,37 +554,55 @@ applyAnimation.points <- function(x, animSet, animation, group, dev) {
           yi <- ithUnit(animSet$animations$y, x$y, i)
       else
           yi <- x$y[i]
-      
+      if ("size" %in% names(animSet$animations))
+          pointsize <- ithUnit(animSet$animations$size, x$size, i)
+      else
+          pointsize <- x$size[i]
+
       switch(animation,
              x={
                  loc <- locToInches(xi, yi, dev)
-                 if (x$pch[i] == 1 || x$pch[i] == 16)
-                     animattr <- "cx"
-                 else
-                     animattr <- "x"
-                 svgAnimateXYWH(animattr, cx(loc$x, dev),
-                                begin[i], interp[i], dur[i], rep[i], rev[i], subName, dev@dev)
+                 svgAnimateXYWH("x", cx(loc$x, dev),
+                                begin[i], interp[i], dur[i],
+                                rep[i], rev[i], subName, dev@dev)
              },
              y={
                  loc <- locToInches(xi, yi, dev)
-                 if (x$pch[i] == 1 || x$pch[i] == 16)
-                     animattr <- "cy"
-                 else
-                     animattr <- "y"
-                 svgAnimateXYWH(animattr, cy(loc$y, dev),
-                                begin[i], interp[i], dur[i], rep[i], rev[i], subName, dev@dev)
+                 svgAnimateXYWH("y", cy(loc$y, dev),
+                                begin[i], interp[i], dur[i],
+                                rep[i], rev[i], subName, dev@dev)
              },
              size={
-                 pointsize <- cd(ithUnit(animSet$animations$size, x$size, i), dev)
-                 if (x$pch[i] == 0) {
-                     svgAnimateXYWH("width", pointsize,
-                                    begin[i], interp[i], dur[i], rep[i], rev[i], subName, dev@dev)
-                     svgAnimateXYWH("height", pointsize,
-                                    begin[i], interp[i], dur[i], rep[i], rev[i], subName, dev@dev)
-                 }
-                 if (x$pch[i] == 1 || x$pch[i] == 16) {
-                     svgAnimateXYWH("r", pointsize,
-                                    begin[i], interp[i], dur[i], rep[i], rev[i], subName, dev@dev)
+                 pchi <- x$pch[i]
+                 docharanim <- (is.character(pchi) && pchi != ".") ||
+                               (is.numeric(pchi) && (pchi >= 32 && pchi != 46))
+                 donumanim <- is.numeric(pchi) && pchi <= 25
+
+                 # If we don't have a good pch, don't bother
+                 if (! any(c(donumanim, docharanim)))
+                     return()
+
+                 dimsize <- cd(pointsize, dev)
+                 svgAnimateXYWH("width", dimsize,
+                                begin[i], interp[i], dur[i],
+                                rep[i], rev[i], subName, dev@dev)
+                 svgAnimateXYWH("height", cd(pointsize, dev),
+                                begin[i], interp[i], dur[i],
+                                rep[i], rev[i], subName, dev@dev)
+                 # Centering the point
+                 trdimsize <- -dimsize / 2
+                 svgAnimateTranslation(trdimsize, trdimsize,
+                                       begin[i], interp[i], dur[i],
+                                       rep[i], rev[i], subName, dev@dev)
+                 # Ensuring that stroke-width stays the same.
+                 # Only do this with low numeric pchs because 
+                 if (donumanim & length(dimsize) > 1) {
+                    swi <- sw[i]
+                    scalef <- dimsize / 10
+                    swi <- swi / scalef
+                    svgAnimatePointSW(swi,
+                                      begin[i], interp[i], dur[i],
+                                      rep[i], rev[i], subName, dev@dev)
                  }
              },
              # Any other attribute
@@ -845,7 +879,7 @@ applyAnimation.segments <- function(x, animSet, animation, group, dev) {
                                  rep[i], rev[i], subName, dev@dev)
             }
             # Any other attribute
-            if (!(animation %in% c("x", "y"))) {
+            if (!(animation %in% c("x0", "y0", "x1", "y1"))) {
                 svgAnimate(animation,
                            paste(ithValue(animSet$animations[[animation]], i),
                                  collapse=";"),
@@ -1020,6 +1054,9 @@ applyAnimation.rastergrob <- function(x, animSet, animation, group, dev) {
                    x$name, dev@dev)
     } else {
 
+        # Raster may have NULL width or height
+        x <- grid:::resolveRasterSize(x)
+
         # We may be dealing with multiple rasters that need animating
         n <- max(length(x$x), length(x$y), length(x$width), length(x$height))
 
@@ -1059,7 +1096,8 @@ applyAnimation.rastergrob <- function(x, animSet, animation, group, dev) {
                 heighti <- ithUnit(animSet$animations$height, x$height, i)
             else
                 heighti <- x$height[i]
-            lb <- leftbottom(xi, yi, widthi, heighti, x$just, dev)
+            lb <- leftbottom(xi, yi, widthi, heighti,
+                             x$just, x$hjust, x$vjust, dev)
     
             switch(animation,
                    x={

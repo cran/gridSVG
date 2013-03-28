@@ -78,4 +78,24 @@ setGeneric("devClose",
            function(device) {
              standardGeneric("devClose")
            })
-           
+
+setGeneric("devStartSymbol",
+          function(pch, device) {
+            standardGeneric("devStartSymbol")
+          })
+
+setGeneric("devPoint",
+          function(pch, device) {
+            standardGeneric("devPoint")
+          })
+
+setGeneric("devEndSymbol",
+           function(device) {
+             standardGeneric("devEndSymbol")
+           })
+
+setGeneric("devUseSymbol",
+           function(point, gp, device) {
+             standardGeneric("devUseSymbol")
+           })
+

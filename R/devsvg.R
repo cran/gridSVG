@@ -40,7 +40,7 @@ devParNameToSVGStyleName <- function(name) {
 
 # R lwd is in points
 devLwdToSVG <- function(lwd, dev) {
-    paste(lwd/72*dev@res, "px", sep="")
+    paste(round(lwd/72*dev@res, 2), "px", sep="")
 }
 
 # An R lty has to become an SVG stroke-dasharray
@@ -62,7 +62,7 @@ devLtyToSVG <- function(lty, lwd, dev) {
     # Convert to SVG stroke-dasharray string
     paste(ifelse(scaledlty == 0,
                  "none",
-                 paste(scaledlty/72*dev@res, "px", sep="")),
+                 paste(round(scaledlty/72*dev@res, 2), "px", sep="")),
           collapse=",")
 }
 
@@ -276,6 +276,11 @@ devParToSVGStyle <- function(gp, dev) {
                 gp$lty <- devLtyToSVG(gp$lty, 1, dev)
             }
         }
+        # Font is an alias for fontface, set to fontface
+        if ("font" %in% names(gp)) {
+            gp$fontface <- gp$font
+            gp$font <- NULL
+        }
         # Split fontface into fontweight and fontstyle
         if ("fontface" %in% names(gp)) {
             svgFont <- devFontFaceToSVG(gp$fontface)
@@ -300,6 +305,7 @@ setClass("svgDevice",
                         res="numeric",
                         attrs="list",
                         links="character",
+                        show="character",
                         # Object created by svgDevice() in svg.R
                         # has no S4 class yet
                         dev="ANY"))
@@ -338,36 +344,37 @@ setMethod("devArrow", signature(device="svgDevice"),
 setMethod("devLines", signature(device="svgDevice"),
           function(lines, gp, device) {
             svgLines(lines$x, lines$y, lines$name, lines$arrow,
-                     device@attrs, device@links,
+                     device@attrs, device@links, device@show,
                      devParToSVGStyle(gp, device), device@dev)
           })
 
 setMethod("devPolygon", signature(device="svgDevice"),
           function(polygon, gp, device) {
             svgPolygon(polygon$x, polygon$y, polygon$name,
-                       device@attrs, device@links,
+                       device@attrs, device@links, device@show,
                        devParToSVGStyle(gp, device), device@dev)
           })
 
 setMethod("devPath", signature(device="svgDevice"),
           function(path, gp, device) {
             svgPath(path$x, path$y, path$rule, path$name,
-                    device@attrs, device@links,
+                    device@attrs, device@links, device@show,
                     devParToSVGStyle(gp, device), device@dev)
           })
 
 setMethod("devRaster", signature(device="svgDevice"),
           function(raster, gp, device) {
             svgRaster(raster$x, raster$y, raster$width, raster$height,
+                      raster$datauri,
                       raster$name, raster$just, raster$vjust, raster$hjust,
                       listToSVGAttrib(raster$attributes), device@links,
-                      devParToSVGStyle(gp, device), device@dev)
+                      device@show, devParToSVGStyle(gp, device), device@dev)
           })
 
 setMethod("devRect", signature(device="svgDevice"),
           function(rect, gp, device) {
             svgRect(rect$x, rect$y, rect$width, rect$height, rect$name,
-                    device@attrs, device@links,
+                    device@attrs, device@links, device@show,
                     devParToSVGStyle(gp, device), device@dev)
           })
 
@@ -387,14 +394,14 @@ setMethod("devText", signature(device="svgDevice"),
                     text$width, text$height, text$ascent, text$descent,
                     text$lineheight, text$charheight, text$fontheight,
                     text$fontfamily, text$fontface, text$name,
-                    device@attrs, device@links,
+                    device@attrs, device@links, device@show,
                     devParToSVGStyle(gp, device), device@dev)
           })
 
 setMethod("devCircle", signature(device="svgDevice"),
           function(circle, gp, device) {
             svgCircle(circle$x, circle$y, circle$r, circle$name,
-                      device@attrs, device@links,
+                      device@attrs, device@links, device@show,
                       devParToSVGStyle(gp, device), device@dev)
           })
 
@@ -412,13 +419,37 @@ setMethod("devStartGroup", signature(device="svgDevice"),
             svgStartGroup(group$name, clip=clip,
                           attributes=device@attrs,
                           links=device@links,
+                          show=device@show,
                           style=devParToSVGStyle(gp, device),
+                          coords = group$coords,
                           svgdev=device@dev)
           })
 
 setMethod("devEndGroup", signature(device="svgDevice"),
           function(name, device) {
-              svgEndGroup(name, device@links, device@dev)
+            svgEndGroup(name, device@links, device@dev)
+          })
+
+setMethod("devStartSymbol", signature(device="svgDevice"),
+          function(pch, device) {
+            svgStartSymbol(pch, device@dev)
+          })
+
+setMethod("devPoint", signature(device="svgDevice"),
+          function(pch, device) {
+            svgPoint(pch, device@dev)
+          })
+
+setMethod("devEndSymbol", signature(device="svgDevice"),
+          function(device) {
+            svgEndSymbol(device@dev)
+          })
+
+setMethod("devUseSymbol", signature(device="svgDevice"),
+          function(point, gp, device) {
+            svgUseSymbol(point$name, point$x, point$y, point$size, point$pch,
+                         device@attrs, device@links, device@show,
+                         devParToSVGStyle(gp, device), device@dev)
           })
 
 setMethod("devClose", signature(device="svgDevice"),
@@ -430,14 +461,15 @@ setMethod("devClose", signature(device="svgDevice"),
 # User Functions
 #################
 
-openSVGDev <- function(name="Rplots.svg", width=6, height=6) {
-    res <- par("cra")[1]/par("cin")[1]
-    # par("cra")[2]/par("cin")[2]*height))
+openSVGDev <- function(name="Rplots.svg", width=6, height=6, res = NULL) {
+    if (is.null(res))
+        res <- par("cra")[1]/par("cin")[1]
+        # par("cra")[2]/par("cin")[2]*height))
     
     new("svgDevice",
-        name=name, width=width, height=height,
+        width=width, height=height,
         res=res,
-        dev=svgOpen(name, res*width, res*height))
+        dev=svgOpen(res*width, res*height))
 }
                    
 
