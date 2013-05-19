@@ -9,14 +9,10 @@
   \code{gridToSVG}, to produce an SVG document with
   script elements.
 }
-\synopsis{
+\usage{
 scriptGrob(script=NULL, filename=NULL, type="application/ecmascript",
            inline=FALSE, name=NULL)
-grid.script(...)  
-  }
-\usage{
-grid.script(script=NULL, filename=NULL, type="application/ecmascript",
-            inline=FALSE, name=NULL)
+grid.script(\dots)  
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -26,6 +22,7 @@ grid.script(script=NULL, filename=NULL, type="application/ecmascript",
   \item{inline}{ A logical specifying whether the script code from the
     file should be included inline or just referenced. }
   \item{name}{ A character value giving a name for the grob. }
+  \item{\dots}{ Arguments passed to \code{scriptGrob}.}
 }
 \value{
   A script.grob object.

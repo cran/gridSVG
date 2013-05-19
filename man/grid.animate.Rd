@@ -9,21 +9,16 @@
   \code{gridToSVG}, to produce an SVG document with
   animated graphical elements.
 }
-\synopsis{
+\usage{
 animateGrob(grob, ...,
             duration=1, 
             rep=FALSE, revert=FALSE,
             begin=0, interpolate="linear", group=FALSE) 
 grid.animate(path, ...) 
-  }
-\usage{
-grid.animate(path, ...,
-             duration=1, 
-             rep=FALSE, revert=FALSE,
-             begin=0, interpolate="linear", group=FALSE) 
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
+  \item{grob}{A grob.}
   \item{path}{ A grob path specifying a drawn grob. }
   \item{\dots}{ Arguments of the grob to animate. }
   \item{duration}{ The duration in seconds of the animation. }
