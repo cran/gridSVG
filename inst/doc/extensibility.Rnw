@@ -30,6 +30,7 @@ This document describes how to write methods for a new grob
 class to work with \gridSVG{}.
 
 <<>>=
+library(grid)
 library(gridSVG)
 @ 
 
@@ -204,7 +205,7 @@ simpleclasssvg <- xmlParse("simpleclass.svg")
 cat(saveXML(simpleclasssvg))
 @ 
 
-Another feature os the \code{timegrob()} function is that it 
+Another feature of the \code{timegrob()} function is that it 
 sets the \code{gp} slot of the text grob from the \code{gp} slot
 of the \code{textgrob} object.  This is important to make 
 sure that any graphical parameter settings on the \code{textgrob}

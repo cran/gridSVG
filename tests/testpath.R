@@ -1,6 +1,7 @@
 
+library(grid)
 require(gridSVG)
 
 example(grid.path)
 
-gridToSVG("path.svg")
+grid.export("path.svg")

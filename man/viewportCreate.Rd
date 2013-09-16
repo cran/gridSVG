@@ -11,10 +11,10 @@
   later manipulation.
 }
 \usage{
-viewportCreate(vpname, newname = NULL)
+viewportCreate(vpname, newname = NULL,
+               vpPath.sep = getSVGoption("vpPath.sep"))
 }
 \arguments{
-
   \item{vpname}{
     The name of the viewport to be recreated, as stored in
     coordinate information. This is most likely a viewport path.
@@ -25,7 +25,9 @@ viewportCreate(vpname, newname = NULL)
     to be the last viewport in listed in \code{vpname} (because it is
     usually a viewport path).
   }
-
+  \item{vpPath.sep}{
+    The viewport path separator that was used for \code{vpname}.
+  }
 }
 \details{
   In order to use this function, coordinate information must be
@@ -42,6 +44,8 @@ viewportCreate(vpname, newname = NULL)
   Simon Potter
 }
 \examples{\dontrun{
+  require(grid)
+
   grid.newpage()
 
   # Pushing a new VP to draw a rect within
@@ -50,14 +54,14 @@ viewportCreate(vpname, newname = NULL)
                         xscale = c(0, 20), yscale = c(0, 10),
                         name = "testVP"))
   grid.rect()
-  gridToSVG("create-test.svg")
+  grid.export("create-test.svg", exportCoords = "file")
 
   # Importing coordinate information
-  gridSVGCoords(fromJSON(readCoordsJS("create-test.svg.coords.js")))
+  gridSVGCoords(readCoordsJS("create-test.svg.coords.js"))
 
   # This should appear to be the same rect
   grid.newpage()
-  pushViewport(viewportCreate("testVP"))
+  pushViewport(viewportCreate("testVP.1"))
   grid.rect()
 
   # Let's see if the scales are accurate, should be:

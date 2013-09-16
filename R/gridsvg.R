@@ -2,38 +2,102 @@
 # Functions to take a grid grob and call appropriate
 # functions from svg.R to produce SVG output
 
+gridToSVG <- function(...) {
+    .Deprecated("grid.export", "gridSVG",
+                "'gridToSVG' is deprecated. Use 'grid.export' in future.'")
+    grid.export(...)
+}
 
 # User function
-gridToSVG <- function(name="Rplots.svg",
-                      export.coords=c("file", "inline", "none"),
-                      export.js=c("file", "inline", "none"),
-                      res = NULL,
-                      indent = TRUE,
-                      xmldecl = xmlDecl()) {
-    # Saving we know how to export
-    export.coords <- match.arg(export.coords)
-    export.js <- match.arg(export.js)
+grid.export <- function(name = "Rplots.svg",
+                        exportCoords = c("none", "inline", "file"),
+                        exportMappings = c("none", "inline", "file"),
+                        exportJS = c("none", "inline", "file"),
+                        res = NULL,
+                        prefix = "",
+                        addClasses = FALSE,
+                        indent = TRUE,
+                        htmlWrapper = FALSE,
+                        usePaths = c("vpPaths", "gPaths", "none", "both"),
+                        uniqueNames = TRUE,
+                        annotate = TRUE,
+                        progress = FALSE,
+                        compression = 0,
+                        xmldecl = xmlDecl()) {
+    # 'XML' can sometimes give us namespace warnings, despite producing
+    # valid SVG. Silence any warnings that 'XML' might give us.
+    if (! is.null(getOption("gridSVGWarnings")) &&
+        ! getOption("gridSVGWarnings")) {
+        oldNSWarning <- options(suppressXMLNamespaceWarning = TRUE)
+        on.exit(options(suppressXMLNamespaceWarning =
+                        oldNSWarning$suppressXMLNamespaceWarning))
+    }
+
+    # To avoid having to ask to redraw, temporarily disable asking.
+    old.ask <- devAskNewPage(FALSE)
+    on.exit(devAskNewPage(old.ask), add = TRUE)
+
+    # grid.force() the scene to resolve high-level grobs
+    # to their standard components
+    dev.hold() ; grid.force() ; dev.flush()
+
+    # Important to know if we need to modify vpPaths/gPaths at all
+    usePaths <- match.arg(usePaths)
+    paths <-
+        if (usePaths == "vpPaths")
+            c(TRUE, FALSE)
+        else if (usePaths == "gPaths")
+            c(FALSE, TRUE)
+        else if (usePaths == "both")
+            rep(TRUE, 2)
+        else # Assume "none"
+            rep(FALSE, 2)
+    assign("use.vpPaths", paths[1], envir = .gridSVGEnv)
+    assign("use.gPaths", paths[2], envir = .gridSVGEnv)
+    assign("uniqueNames", uniqueNames, envir = .gridSVGEnv)
+    assign("prefix", prefix, envir = .gridSVGEnv)
+    assign("addClasses", addClasses, envir = .gridSVGEnv)
+
+    # Saving how to export
+    exportCoords <- match.arg(exportCoords)
+    exportMappings <- match.arg(exportMappings)
+    exportJS <- match.arg(exportJS)
     # If we are exporting js but returning a character
     # vector we need to save the contents inline, because
     # we don't want to touch the disk
     if (is.null(name) || ! nzchar(name)) {
-        if (export.coords == "file") {
-            export.coords <- "inline"
-            warning('export.coords changed from "file" to "inline"')
+        if (exportCoords == "file") {
+            exportCoords <- "inline"
+            warning('exportCoords changed from "file" to "inline"')
         }
-        if (export.js == "file") {
-            export.js <- "inline"
-            warning('export.js changed from "file" to "inline"')
+        if (exportMappings == "file") {
+            exportMappings <- "inline"
+            warning('exportMappings changed from "file" to "inline"')
+        }
+        if (exportJS == "file") {
+            exportJS <- "inline"
+            warning('exportJS changed from "file" to "inline"')
         }
     }
-    assign("export.coords", export.coords, envir = .gridSVGEnv)
-    assign("export.js", export.js, envir = .gridSVGEnv)
+    assign("exportCoords", exportCoords, envir = .gridSVGEnv)
+    assign("exportMappings", exportMappings, envir = .gridSVGEnv)
+    assign("exportJS", exportJS, envir = .gridSVGEnv)
+
+    # Ensure contexts work correctly
+    assign("contextNames", character(0), envir = .gridSVGEnv)
+    assign("contextLevels", 0, envir = .gridSVGEnv)
 
     # Ensure we're at the top level
-    upViewport(0)
+    upViewport(0, recording=FALSE)
     rootgp <- get.gpar()
     rootvp <- current.viewport()
     roottm <- current.transform()
+
+    if (progress) {
+        assign("showProgress", TRUE, envir = .gridSVGEnv)
+        ngrobs <- length(grid.ls(print = FALSE)$name)
+        progressInit("grob", ngrobs)
+    }
 
     svgdev <- openSVGDev(name, width=par("din")[1], height=par("din")[2], res = res)
     # Create a gTree from the current page
@@ -41,68 +105,199 @@ gridToSVG <- function(name="Rplots.svg",
     # based on ROOT vp
     # Use 'wrap=TRUE' to ensure correct capture of all types of 'grid' output
     gTree <- grid.grab(name="gridSVG", wrap=TRUE, gp=rootgp)
-    # Emptying the VP usage table
-    vpUsageTable <- data.frame(vpname = character(0),
-                               count = integer(0),
-                               stringsAsFactors=FALSE)
-    assign("vpUsageTable", vpUsageTable, envir = .gridSVGEnv)
+    if (anyRefsDefined()) {
+        # Reducing only to reference definitions
+        usageTable <- get("usageTable", envir = .gridSVGEnv)
+        usageTable <- usageTable[usageTable$type == "ref", ]
+        assign("usageTable", usageTable, envir = .gridSVGEnv)
+    } else {
+        # Emptying the usage table
+        assign("usageTable",
+               data.frame(name = character(0),
+                          suffix = integer(0),
+                          type = character(0),
+                          selector = character(0),
+                          xpath = character(0),
+                          stringsAsFactors = FALSE),
+               envir = .gridSVGEnv)
+    }
     # Emptying point usage table
-    pchUsageTable <- matrix(c(0:127, logical(128)), ncol = 2,
-                            dimnames = list(NULL, c("pch", "used")))
-    assign("pchUsageTable", pchUsageTable, envir = .gridSVGEnv)
+    assign("pchUsageTable", 
+           matrix(c(0:127, logical(128)), ncol = 2,
+                  dimnames = list(NULL, c("pch", "used"))),
+           envir = .gridSVGEnv)
     # Because the root viewport is never entered into, we need to set
     # the root vp coordinate information before we start entering into
     # other VPs
     currVpCoords <- list(ROOT = getCoordsInfo(rootvp, roottm, svgdev))
     assign("vpCoords", currVpCoords, envir = .gridSVGEnv)
-
+    # When using referenced content, the ID generated at the time of
+    # definition may be different to the ID at draw time, see getSVGoptions()
+    assignRefIDs()
     # Convert gTree to SVG
     gridToDev(gTree, svgdev)
+    # Flush out any referenced definitions so that grobs can use them
+    flushDefinitions(svgdev)
     svgroot <- devClose(svgdev)
-    # Adding in JS if necessary, always write coords *first*
-    # Not strictly necessary but may avoid potential issues
-    coords <- svgCoords(export.coords, name, svgroot)
-    jsutils <- svgJSUtils(export.js, name, svgroot)
-    doctxt <- saveXML(svgroot, indent = indent)
+    if (progress) {
+        progressClose()
+        assign("showProgress", FALSE, envir = .gridSVGEnv)
+    }
+    # Adding in JS if necessary, always write utils *last*.
+    # Not strictly necessary but may avoid potential issues in JS.
+    # NOTE that we call in REVERSE order because each one is added
+    # as FIRST child of the root svg node
+    jsutils <- svgJSUtils(exportJS, name, svgroot)
+    mappings <- svgMappings(exportMappings, name, svgroot)
+    coords <- svgCoords(exportCoords, name, svgroot)
+    # If we're annotating output with gridSVG call info
+    if (annotate) {
+        # Realise true values for some arguments
+        if (is.null(name))
+            name <- ""
+        if (is.null(res))
+            res <- round(par("cra")[1] / par("cin")[1], 2)
+        # Ignore annotate in this list, because it will be implied
+        # Also ignoring the XML declaration, we can see it in the
+        # output directly. Ignoring compression because it is also
+        # implied and does not affect output. Progress is also not
+        # useful.
+        callAttrs <- list(
+            name = name,
+            exportCoords = exportCoords,
+            exportMappings = exportMappings,
+            exportJS = exportJS,
+            res = res,
+            prefix = prefix,
+            addClasses = addClasses,
+            indent = indent,
+            htmlWrapper = htmlWrapper,
+            usePaths = usePaths,
+            uniqueNames = uniqueNames
+        )
+        svgAnnotate(svgroot, callAttrs)
+    }
 
     # In an on-screen device, we can be left with a blank device
     # so refresh just to ensure we can see everything. Also happens
     # with devices like png and pdf so just force a refresh.
-    # Also, to avoid having to ask to refresh, just temporarily
-    # disable asking.
-    old.ask <- devAskNewPage(FALSE)
-    on.exit(devAskNewPage(old.ask))
-    grid.refresh()
+    # Sometimes display lists can be large, flush all drawing at once
+    # to speed up redrawing
+    dev.hold() ; grid.refresh() ; dev.flush()
 
-    # See if we need an XML declaration added
+    result <- list(svg = svgroot,
+                   coords = coords,
+                   mappings = mappings,
+                   utils = jsutils)
+
+    if (! testUniqueMappings(svgroot))
+        warning("Not all element IDs are unique. Consider running 'grid.export' with 'uniqueNames = TRUE'.")
+
+    # Return SVG list when an inadequate filename is supplied
+    if (is.null(name) || ! nzchar(name))
+        return(result)
+
+    doctxt <- saveXML(svgroot, indent = indent)
     if (! is.null(xmldecl))
         doctxt <- paste0(xmldecl, doctxt)
 
-    # Return SVG vector when an inadequate filename is supplied
-    if (is.null(name) || ! nzchar(name))
-        return(list(svg = svgroot,
-                    coords = coords,
-                    utils = jsutils))
+    # Now save the SVG to a file, optionally a compressed file
+    outcon <-
+        if (compression > 0) gzfile(name, "w")
+        else file(name, "w")
+    cat(doctxt, file = outcon)
+    close(outcon)
 
-    # Save SVG
-    cat(doctxt, file = name)
     # Write an HTML wrapper for this
-    htmlFile(name, svgdev@dev)
+    if (htmlWrapper)
+        htmlFile(name, svgdev@dev)
+
+    # Return result invisibly
+    invisible(result)
 }
 
-old.gridToSVG <- function(name="Rplots.svg") {
-  svgdev <- openSVGDev(name, width=par("din")[1], height=par("din")[2])
-  # Start a new page because we are going to be reproducing the
-  # pushing and popping of viewports and this needs to be done
-  # from scratch
-  grid.newpage(recording=FALSE)
-  # Traverse the grid display list producing
-  # SVG equivalents of all grid output
-  # This nastily peeks into the grid NAMESPACE to get the
-  # display list (for now)
-  lapply(grid:::grid.Call("L_getDisplayList"), gridToDev, svgdev)
-  # Before closing, need to pop the top-level viewport
-  # which is not possible in grid
-  devEndGroup(svgdev)
-  devClose(svgdev)
+gridSVG.newpage <- function(wipeRefs = TRUE, recording = TRUE) {
+    if (wipeRefs) {
+        assign("refDefinitions", list(), envir = .gridSVGEnv)
+        assign("refUsageTable",
+               data.frame(label = character(0),
+                          used = logical(0),
+                          stringsAsFactors = FALSE),
+               envir = .gridSVGEnv)
+        assign("usageTable",
+               data.frame(name = character(0),
+                         suffix = integer(0),
+                         type = character(0),
+                         selector = character(0),
+                         xpath = character(0),
+                         stringsAsFactors = FALSE),
+               envir = .gridSVGEnv)
+    }
+    grid.newpage(recording = recording)
+}
+
+gridsvg <- function(name = "Rplots.svg",
+                    exportCoords = c("none", "inline", "file"),
+                    exportMappings = c("none", "inline", "file"),
+                    exportJS = c("none", "inline", "file"),
+                    res = NULL,
+                    prefix = "",
+                    addClasses = FALSE,
+                    indent = TRUE,
+                    htmlWrapper = FALSE,
+                    usePaths = c("vpPaths", "gPaths", "none", "both"),
+                    uniqueNames = TRUE,
+                    annotate = TRUE,
+                    progress = FALSE,
+                    compression = 0,
+                    xmldecl = xmlDecl(),
+                    ...) {
+    # Avoid multiple gridSVG devices (because referenced content can
+    # have side effects across devices
+    deviceNames <- unlist(.Devices)
+    if ("gridsvg" %in% deviceNames)
+        stop("Only one 'gridsvg' device may be used at a time")
+    callargs <- as.list(match.call(expand.dots = FALSE))[-1]
+    dev.args <- as.list(callargs$`...`) # pairlists...
+    if (is.null(dev.args))
+        dev.args <- list(file = NULL)
+    else
+        dev.args["file"] <- list(NULL)
+    do.call("pdf", dev.args)
+    devind <- which(names(callargs) == "...")
+    gridsvg.args <- if (length(devind)) callargs[-devind]
+                    else callargs
+    if (exists("gridSVGArgs", envir = .gridSVGEnv))
+        gridSVGArgs <- get("gridSVGArgs", envir = .gridSVGEnv)
+    else
+        gridSVGArgs <- list()
+    gridSVGArgs[[dev.cur()]] <- gridsvg.args
+    assign("gridSVGArgs", gridSVGArgs, envir = .gridSVGEnv)
+    # HACK!
+    # This renames the pdf device to "gridsvg" purely for convenience.
+    devs <- .Devices
+    devs[[dev.cur()]] <- "gridsvg"
+    assign(".Devices", devs, envir = baseenv())
+}
+
+dev.off <- function(which = dev.cur()) {
+    if (.Devices[[which]] == "gridsvg") {
+        # If there's nothing on the display list then nothing
+        # can be drawn
+        if (! length(grid.ls(print = FALSE)$name)) {
+            grDevices::dev.off(which)
+            warning("No grid image was drawn so no SVG was created")
+            return(invisible())
+        }
+        gridsvg.args <- get("gridSVGArgs", envir = .gridSVGEnv)[[which]]
+        name <- gridsvg.args$name
+        image <- do.call("grid.export", gridsvg.args)
+        grDevices::dev.off(which)
+        if (is.null(name) || ! nzchar(name))
+            image
+        else
+            invisible(image)
+    } else {
+        grDevices::dev.off(which)
+    }
 }

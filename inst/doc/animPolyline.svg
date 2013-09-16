@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="ASCII"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="432px" height="432px" viewBox="0 0 432 432" version="1.1">
+  <metadata xmlns:gridsvg="http://www.stat.auckland.ac.nz/~paul/R/gridSVG/">
+    <gridsvg:generator name="gridSVG" version="1.3-1" time="2013-09-16 12:10:28"/>
+    <gridsvg:argument name="name" value="animPolyline.svg"/>
+    <gridsvg:argument name="exportCoords" value="none"/>
+    <gridsvg:argument name="exportMappings" value="none"/>
+    <gridsvg:argument name="exportJS" value="none"/>
+    <gridsvg:argument name="res" value="72"/>
+    <gridsvg:argument name="prefix" value=""/>
+    <gridsvg:argument name="addClasses" value="FALSE"/>
+    <gridsvg:argument name="indent" value="TRUE"/>
+    <gridsvg:argument name="htmlWrapper" value="FALSE"/>
+    <gridsvg:argument name="usePaths" value="vpPaths"/>
+    <gridsvg:argument name="uniqueNames" value="TRUE"/>
+    <gridsvg:separator name="id.sep" value="."/>
+    <gridsvg:separator name="gPath.sep" value="::"/>
+    <gridsvg:separator name="vpPath.sep" value="::"/>
+  </metadata>
+  <g transform="translate(0, 432) scale(1, -1)">
+    <g id="gridSVG" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="none" stroke-width="0.75" font-size="12" font-family="Helvetica, Arial, FreeSans, Liberation Sans, Nimbus Sans L, sans-serif" opacity="1" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-opacity="1" fill-opacity="0" font-weight="normal" font-style="normal">
+      <g id="GRID.rect.2.1">
+        <rect id="GRID.rect.2.1.1" x="0" y="0" width="432" height="432"/>
+      </g>
+      <animate xlink:href="#polyline.1.1" attributeName="points" begin="0s" calcMode="linear" dur="1s" values="86.4,302.4 129.6,216 172.8,302.4;86.4,129.6 129.6,216 172.8,129.6;86.4,302.4 129.6,216 172.8,302.4" repeatCount="indefinite" fill="freeze"/>
+      <animate xlink:href="#polyline.1.2" attributeName="points" begin="0s" calcMode="linear" dur="1s" values="259.2,129.6 302.4,216 345.6,129.6;259.2,302.4 302.4,216 345.6,302.4;259.2,129.6 302.4,216 345.6,129.6" repeatCount="indefinite" fill="freeze"/>
+      <g id="polyline.1">
+        <polyline id="polyline.1.1" points="86.4,302.4 129.6,216 172.8,302.4" stroke-width="3.75" fill="none"/>
+        <polyline id="polyline.1.2" points="259.2,129.6 302.4,216 345.6,129.6" stroke-width="3.75" fill="none"/>
+      </g>
+    </g>
+  </g>
+</svg>

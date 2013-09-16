@@ -1,7 +1,7 @@
 library(grid)
 library(gridSVG)
 svgdev <- svgOpen(width=400, height=400)
-svgRect(0, 0, 400, 400,
+svgRect(0, 0, 400, 400, 
         style=svgStyle(fill="none", stroke="black"),
         svgdev=svgdev)
 svgStartGroup(svgdev=svgdev)

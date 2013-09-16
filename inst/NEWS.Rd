@@ -2,6 +2,225 @@
 \title{NEWS file for the gridSVG package}
 \encoding{UTF-8}
 
+\section{Changes in version 1.3-0}{
+  \itemize{
+    \item Added support for rotated viewports
+    (previously, rectangles, text, rasters, and clipping rects
+    did not export properly, if drawn within a rotated viewport)
+
+    Includes changes to rendering, animation, and coordinate system
+    export and conversion.
+
+    \item Fixed bug in viewportConvertWidth() and
+    viewportConvertHeight() when converting from "native".
+
+    \item Bug fix for positioning grobs with dimensions when a
+    viewport's x-scale or y-scale is "flipped". (Simon)
+
+    \item Reposition <defs> so that definitions are always available
+    when used. Allows renderers like librsvg to render gridSVG images
+    correctly. For consistency, pch definitions are also pushed into the
+    same <defs> element. (Simon)
+
+    \item Bug fix for 'lwd'. They are now defined as being 1/96 inches,
+    which matches most graphics devices. (Simon)
+
+    \item Only one 'gridsvg' device can now be open at once. This is
+    because referenced content (like gradients, masks, etc) can have
+    side effects across multiple 'gridsvg' devices. (Simon)
+
+    \item New argument for 'grid.export()', 'progress'. When this
+    argument is 'TRUE', messages will be printed to the console that
+    show how far gridSVG is through processing an image. Additionally,
+    progress bars are drawn to aid in estimation of progress. (Simon)
+
+    \item New argument for 'grid.export()', 'compression'. This can take
+    an integer value between 0 and 9 that describes the level of (gzip)
+    compression applied to the exported image. (Simon)
+
+    \item Added 'group', 'strict', 'grep', and 'global' arguments
+    to grid.animate() (to bring it into line with grid.hyperlink()
+    and grid.garnish().
+
+    \item Now Import rather than Depend on other packages.
+  }
+}
+
+\section{Changes in version 1.2-0}{
+  \itemize{
+
+    \item The main change in this version involves taking advantage of
+    changes in R version 3.0.0, which introduced a \code{grid.force()}
+    function. This reduces the need for special methods in this package
+    to draw custom grobs.
+
+    \item Renamed 'gridToSVG' to 'grid.export'. 'gridToSVG' is now
+    deprecated and will produce a warning but will still work.
+    'grid.export' should be used from now on. (Simon)
+
+    \item Renamed 'grid.export' arguments for
+    consistency. 'export.coords', 'export.mappings', and 'export.js' are
+    now camelCased to 'exportCoords', 'exportMappings', 'exportJS'
+    respectively. (Simon)
+
+    \item Bumped R version dependency to R >= 3.0.0 because
+    \code{gridToSVG()} now calls \code{grid.force()} before export
+
+    \item Removed several \code{primToDev()} methods:
+    \itemize{
+      \item \code{primToDev.xaxis()}
+      \item \code{primToDev.yaxis()}
+      \item \code{grobToDev.roundrect()}
+      \item \code{grobToDev.frame()}
+      \item \code{grobToDev.cellGrob()}
+    }
+
+    \item Bug fix for multi-line text when cex != 1
+
+    \item Initial implementation of pattern fills. Define pattern fills
+    using 'pattern' and 'registerPatternFill' (and also
+    'registerPatternFillRef' to reuse an existing definition). These can
+    then be applied to grobs using 'grid.patternFill' and
+    'patternFillGrob'. (Simon)
+
+    \item Add a graphics device-like interface to gridSVG. Use 'gridsvg'
+    to open a gridSVG device, and 'dev.off' to close it. (Simon)
+
+    \item Added new 'gridSVG.newpage' function. It will clear all
+    definitions of referenced content as well as calling
+    'grid.newpage'. (Simon)
+
+    \item Now allowing for a prefix to be applied to all SVG ID
+    attributes. Particularly useful when including multiple gridSVG
+    images in the same document as it ensures uniqueness of IDs between
+    documents. This can be used by specifying the 'prefix' argument to
+    'grid.export'. (Simon)
+
+    \item New optional parameter to 'grid.export', 'addClasses'. If this
+    argument is 'TRUE', then gridSVG will add an SVG class attribute to
+    each grob or viewport it draws. The value of this attribute is what
+    is produced by calling 'class' on the object. This is useful for
+    allowing a convenient way of selecting more than one type of grob
+    (e.g. the '.axis' CSS selector will select all axis grobs). (Simon)
+
+    \item Added implementation of gradient fills for grobs. See
+    'linearGradient', 'radialGradient', and 'registerGradientFill' for
+    defining gradients. Use 'grid.gradientFill' and 'gradientFillGrob'
+    to apply gradient fills to grobs. (Simon)
+
+    \item Bug fix for pointsGrobs. 'size' units were unnecessarily being
+    manipulated. They should now be sized more accurately. (Simon & Paul)
+
+    \item Added support for non-rectangular clipping paths. Use
+    'grid.clipPath' and 'clipPathGrob' for applying clipping paths to
+    grobs. Use 'pushClipPath' for applying to the current viewport,
+    which behaves similarly to 'grid.clip'. Uses an object produced by
+    'clipPath' as the definition for the clipping path and is registered
+    by calling 'registerClipPath'. (Simon)
+
+    \item Added support for opacity masks. Use 'grid.mask' and
+    'maskGrob' to apply opacity masks to grobs. Use 'pushMask' for
+    applying to the current viewport, which behaves similarly to
+    'grid.clip'. Uses a grob as the definition for an opacity
+    mask. Define the mask using 'mask' and 'registerMask'. (Simon)
+
+    \item New function 'popContext', which stops the effect of
+    'pushMask' and 'pushClipPath'. (Simon)
+
+    \item Bug fix for 'clipGrob's. Now unwinds only when a viewport is
+    popped and just not any grouped content. (Simon)
+
+    \item Added support for SVG filter effects. Create a filter effect
+    by calling 'filterEffect' and adding as its children some of the
+    various filter effect primitives by calling 'fe*' functions. Some of
+    these filter effects are quite complicated so reading the function
+    documentation and the SVG specification is required. Apply filter
+    effects to grobs using 'grid.filter' and 'filterGrob'. (Simon)
+
+    \item Bugfix for unit conversion functions. "svg" was not being
+    handled correctly. (Simon)
+
+    \item Bugfix for arrows. Definition now matches 'grid'. Now also
+    handles the case when an arrow's line width is greater than its
+    width/height (Firefox would not show the arrow prior to this
+    fix). (Simon)
+
+    \item Bugfix for polygons and xsplines. They should now handle the
+    case where an 'id.length' is 0. (Simon)
+
+    \item Plain SVG text can now be inserted into the image (in a
+    similar manner to 'grid.element') using 'grid.textNode'. (Simon)
+
+    \item Bugfix 'childrenOrder' is now respected for gTrees.
+
+    \item Bugfix for colours. 0 is now valid (but transparent). (Simon)
+
+    \item Fix for garnishing. They should now always be applied over the
+    top of existing SVG attributes. (Simon)
+
+    \item Bug fix for fill in arrow heads on xsplines (was being
+    forced to transparent)
+
+    \item Bug fix to trim identical values from start and end of
+    xspline points (otherwise auto calculation of arrow orientation
+    can get confused)
+  }
+}
+
+\section{Changes in version 1.1-0}{
+  \itemize{
+
+    \item Added options for 'vpPath' and 'gPath' separators. This allows
+    for easier manipulation in JavaScript as the separators no longer
+    need to be the troublesome '::' (which require escaping with CSS
+    selectors). (Simon)
+
+    \item Exporting HTML files is now optional. (Simon)
+
+    \item Always return a named list with the output of
+    'gridToSVG()'. This is invisibly returned when an SVG file is saved
+    to disk. (Simon)
+
+    \item Added 'usePaths' option for determining whether to use vpPaths
+    and gPaths SVG IDs. (Simon)
+
+    \item Added 'uniqueNames' option for generating unique names for SVG
+    IDs from grob and viewport names. This further distances ourselves
+    from the original grid names. (Simon)
+
+    \item Added 'export.mappings' option for exporting name mapping
+    information. This allows us to keep track of names and how they have
+    been modified by gridSVG. (Simon)
+
+    \item Added 'gridSVGMappings' function to import mapping
+    information. (Simon)
+
+    \item Added 'getSVGMappings' function to retrieve IDs generated for
+    an image from a grob or a viewport name. Also exported are CSS
+    selectors and XPath expressions. These can also be retrieved by
+    'getSVGMappings'. (Simon)
+
+    \item Added new generic element interface, 'grid.element'. Allows
+    any arbitrary SVG element (or tree of elements) to be inserted into
+    the resulting SVG image. (Simon)
+
+    \item When using the 'grep' argument for 'grid.hyperlink' and
+    'grid.garnish', we can now apply effects to multiple grobs where
+    gPaths are regular expressions. (Simon)
+
+    \item Added a new optional argument to 'gridToSVG', called
+    'annotate'. If 'TRUE', adds an SVG 'metadata' element below the root
+    '<svg>' element that provides information on how 'gridToSVG' was
+    called, along with metadata about gridSVG itself. Potentially useful
+    for debugging. (Simon)
+
+    \item Including support for 'clipGrob's. (Simon)
+
+    \item Add support for 'gpar()'s 'lex' parameter. (Simon)
+
+  }
+}
+
 \section{Changes in version 1.0-0}{
   \itemize{
 
@@ -89,6 +308,7 @@
 
     \item Added 'grep' argument to grid.hyperlink()
     (suggestion by Oscar Perpignan Lamigueiro).
+
   }
 }
 
@@ -431,4 +651,3 @@
 
   }
 }
-

@@ -3,17 +3,32 @@
 # parse. To support the ggplot2 package, these compatibility features have
 # been created.
 
+# NOTE that the check for a makeContent.gtable() method will
+# bail out back to normal processing;  this is because there
+# exists a fork of 'gtable' that does NOT need this special
+# case handling (and one day that fork may be merged back
+# into the 'gtable' trunk)
+
 grobToDev.gTableChild <- function(x, dev) {
-  depth <- enforceVP(x$wrapvp, dev)
-  NextMethod()
-  unwindVP(x$wrapvp, depth, dev)
+  if (is.null(getS3method("makeContent", "gtable", TRUE))) {
+    depth <- enforceVP(x$wrapvp, dev)
+    NextMethod()
+    unwindVP(x$wrapvp, depth, dev)
+  } else {
+    NextMethod()
+  }
 }
 
 
 grobToDev.gTableParent <- function(x, dev) {
-  depth <- enforceVP(x$layoutvp, dev)
-  primToDev(x, dev)
-  unwindVP(x$layoutvp, depth, dev)
+  if (is.null(getS3method("makeContent", "gtable", TRUE))) {
+    depth <- enforceVP(x$layoutvp, dev)
+    x$classes <- class(x)
+    primToDev(x, dev)
+    unwindVP(x$layoutvp, depth, dev)
+  } else {
+    NextMethod()
+  }
 }
 
 # Ripped from gtable package's grid.draw.gtable method in grid.r.
@@ -47,7 +62,11 @@ gTableGrob <- function(x) {
 }
 
 grobToDev.gtable <- function(x, dev) {
-  grobToDev(gTableGrob(x), dev)
+  if (is.null(getS3method("makeContent", "gtable", TRUE))) {
+    grobToDev(gTableGrob(x), dev)
+  } else {
+    NextMethod()
+  }
 }
 
 

@@ -42,9 +42,13 @@ garnishGrob <- function(x, ..., group=TRUE) {
     x
 }
 
-grid.garnish <- function(path, ..., grep=FALSE, redraw=FALSE) {
-    grid.set(path, garnishGrob(grid.get(path, grep=grep), ...),
-             grep=grep, redraw=redraw)
+grid.garnish <- function(path, ..., group=TRUE, redraw = FALSE,
+                         strict=FALSE, grep=FALSE, global=FALSE) {
+    grobApply(path, function(path) {
+        grid.set(path, garnishGrob(grid.get(path), ..., group=group),
+                 redraw = redraw)
+    }, strict = strict, grep = grep, global = global)
+    invisible()
 }
 
 garnish <- function(x, ...) {
@@ -53,6 +57,7 @@ garnish <- function(x, ...) {
 
 # This is intended to handle all basic graphical primitives
 garnish.grob <- function(x, ...) {
+    x$name <- getID(x$name, "grob", FALSE)
     c(lapply(x$attributes,
              function(attr) {
                  n <- length(attr)
@@ -69,18 +74,20 @@ garnish.grob <- function(x, ...) {
 
 # A hopefully useful default for gTrees
 garnish.gTree <- function(x, ...) {
+    x$name <- getID(x$name, "grob", FALSE)
     c(lapply(x$attributes,
              function(attr) {
                  n <- length(attr)
                  if (is.null(names(attr)))
-                     names(attr) <- (x$childrenOrder)[1:n]
+                     names(attr) <- sapply((x$childrenOrder)[1:n],
+                                           function(x) getID(x, "grob", FALSE))
                  attr
              }),
       lapply(x$groupAttributes,
              function(attr, groupName) {
                  names(attr) <- x$name
                  attr
-             }))                          
+             }))
 }
 
 # NOTE that this has to be a primToDev() method
@@ -89,4 +96,86 @@ garnish.gTree <- function(x, ...) {
 primToDev.garnished.grob <- function(x, dev) {
     dev@attrs <- garnish(x)
     NextMethod()
+}
+
+# Custom function for applying hyperlinks or garnishing to a set of grobs
+grobApply <- function(path, FUN, ...,
+                      strict = FALSE, global = FALSE, grep = FALSE) {
+    if (! inherits(path, "gPath"))
+        path <- grid:::gPathDirect(path)
+    depth <- grid:::depth(path)
+    grep <- rep(grep, length.out = depth)
+    if (! strict)
+        grep <- grep[1]
+
+    # Get each piece of the path as a sequential char vector
+    pathPieces <-
+        if (! is.null(path$path))
+            c(strsplit(path$path, grid:::.grid.pathSep)[[1]], path$name)
+        else
+            path$name
+
+    dl <- grid.ls(print = FALSE)
+    if (! length(dl$name))
+        stop("Nothing on the display list")
+    # Limit our search only to grobs whose depth matches ours
+    # For not strict, we're only looking at the grob names, so all
+    # depths apply.
+    matchingDepths <- if (! strict) 1:length(dl$name)
+                      else which((dl$gDepth + 1) == depth)
+    if (! length(matchingDepths))
+        return()
+
+    nMatches <- 0
+    searchMatches <- vector("list", length(matchingDepths))
+    # For each name of the correct path length
+    for (i in matchingDepths) {
+        dlPathPieces <-
+            if (! is.null(path$path))
+                c(strsplit(dl$gPath[i], grid:::.grid.pathSep)[[1]],
+                  dl$name[i])
+            else
+                dl$name[i]
+        matches <- logical(depth)
+        if (! strict) {
+            # If this is not strict, check only the *names*, ignore path
+            matches <- if (grep) grepl(path$name, dl$name[i])
+                       else path$name == dl$name[i]
+        } else {
+            # Check whether we need to grep this level or not, attempt match
+            for (j in 1:depth) {
+                matches[j] <-
+                    if (grep[j])
+                        grepl(pathPieces[j], dlPathPieces[j])
+                    else
+                        pathPieces[j] == dlPathPieces[j]
+            }
+        }
+        # We have found a grob
+        if (all(matches)) {
+            if (! global) {
+                # Returning early to avoid further searching
+                FUN(do.call("gPath", list(dlPathPieces)), ...)
+                return()
+            } else {
+                nMatches <- nMatches + 1
+                searchMatches[[nMatches]] <- do.call("gPath", list(dlPathPieces))
+            }
+        }
+    }
+
+    if (! nMatches)
+        return()
+
+    # We may have allocated a list too large earlier,
+    # subset to only matching results
+    searchMatches <- searchMatches[1:nMatches]
+
+    # Now that we have all of the grobs, lets try and get them,
+    # and then apply a function to each of them
+    for (i in 1:nMatches)
+        FUN(searchMatches[[i]], ...)
+
+    # Ensure nothing is returned
+    invisible()
 }

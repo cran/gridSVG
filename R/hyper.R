@@ -15,10 +15,13 @@ hyperlinkGrob <- function(x, href, show=NULL, group=TRUE) {
     x
 }
 
-grid.hyperlink <- function(path, href, show=NULL, group=TRUE, grep=FALSE) {
-    x <- grid.get(path, grep=grep)
-    x <- hyperlinkGrob(x, href, show, group)
-    grid.set(path, x, grep=grep, redraw=FALSE)
+grid.hyperlink <- function(path, href, show=NULL, group=TRUE, redraw=FALSE,
+                           strict=FALSE, grep=FALSE, global=FALSE) {
+    grobApply(path, function(path) {
+        grid.set(path, hyperlinkGrob(grid.get(path), href, show, group),
+                 redraw = redraw)
+    }, strict = strict, grep = grep, global = global)
+    invisible()
 }
 
 link <- function(x) {
@@ -26,6 +29,7 @@ link <- function(x) {
 }
 
 link.grob <- function(x) {
+    x$name <- getID(x$name, "grob", FALSE)
     href <- x$links
     if (!is.null(href)) {
         n <- length(href)
@@ -40,11 +44,13 @@ link.grob <- function(x) {
 
 # A hopefully useful default for gTrees
 link.gTree <- function(x, ...) {
+    x$name <- getID(x$name, "grob", FALSE)
     href <- x$links
     if (!is.null(href)) {
         n <- length(href)
         if (is.null(names(href)))
-            names(href) <- (x$childrenOrder)[1:n]
+            names(href) <- sapply((x$childrenOrder)[1:n],
+                                  function(x) getID(x, "grob", FALSE))
     }
     groupHref <- x$groupLinks
     if (!is.null(groupHref))
@@ -57,6 +63,7 @@ linkShow <- function(x) {
 }
 
 linkShow.grob <- function(x, ...) {
+    x$name <- getID(x$name, "grob", FALSE)
     show <- x$show
     if (is.null(show))
         return("")
@@ -71,13 +78,15 @@ linkShow.grob <- function(x, ...) {
 }
 
 linkShow.gTree <- function(x, ...) {
+    x$name <- getID(x$name, "grob", FALSE)
     show <- x$show
     if (is.null(show))
         return("")
     if (!is.null(x$links)) {
         n <- length(show)
         if (is.null(names(show)))
-            names(show) <- (x$childrenOrder)[1:n]
+            names(show) <- sapply((x$childrenOrder)[1:n],
+                                  function(x) getID(x, "grob", FALSE))
     }
     if (!is.null(x$groupLinks))
         names(show) <- x$name

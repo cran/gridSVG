@@ -10,6 +10,7 @@ pushViewport(viewport(gp=gpar(col="black", fill=NA)))
 # Implemented using transparency
 
 # Some dummy data
+set.seed(1000)
 x <- sort(runif(20, 1, 10))
 y1 <- (x - 5) + rnorm(20)
 y2 <- -(x - 5) + rnorm(20)
@@ -48,5 +49,5 @@ popViewport(2)
 
 popViewport()
 
-gridToSVG("transparency.svg")
+grid.export("transparency.svg")
 dev.off()

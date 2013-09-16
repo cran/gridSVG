@@ -19,11 +19,15 @@ setSVGoptions(...)
   }
 }
 \details{
-  The only option currently available is:
+  The options currently available are:
   \itemize{
     \item \code{id.sep} which controls the separator used between the
     grob name and the suffix number when \pkg{gridSVG} generates
     id values for SVG elements.
+    \item \code{gPath.sep} which controls the separator used between
+    elements of a grid \code{gPath}.
+    \item \code{vpPath.sep} which controls the separator used between
+    elements of a grid \code{vpPath}.
   }
 }
 \value{
@@ -33,6 +37,5 @@ setSVGoptions(...)
   for the options that were changed.
 }
 \author{ Paul Murrell }
-\seealso{ \code{\link{gridToSVG}} }
+\seealso{ \code{\link{grid.export}} }
 \keyword{ dplot }
-

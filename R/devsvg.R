@@ -38,9 +38,11 @@ devParNameToSVGStyleName <- function(name) {
          NA)
 }
 
-# R lwd is in points
+# R lwd is in points, pixels or 1/96 inches
+# However, most (perhaps all?) devices use 1/96 for their
+# definition of an 'lwd', so use that.
 devLwdToSVG <- function(lwd, dev) {
-    paste(round(lwd/72*dev@res, 2), "px", sep="")
+    round(lwd/96 * dev@res, 2)
 }
 
 # An R lty has to become an SVG stroke-dasharray
@@ -62,21 +64,20 @@ devLtyToSVG <- function(lty, lwd, dev) {
     # Convert to SVG stroke-dasharray string
     paste(ifelse(scaledlty == 0,
                  "none",
-                 paste(round(scaledlty/72*dev@res, 2), "px", sep="")),
+                 round(scaledlty/96 * dev@res, 2)),
           collapse=",")
 }
 
 devColToSVG <- function(col) {
   if (length(col) > 1)
     warning("Only first colour used")
+  if (is.numeric(col) && col == 0)
+      col <- "transparent"
   # Handle "transparent" as a special case
   if (col == "transparent")
       "none"
-  else {
-      rgbaCol <- col2rgb(col)
-      rgbCol <- rgbaCol
-      paste("rgb(", paste(rgbCol, collapse=","), ")", sep="")
-  }
+  else
+      paste("rgb(", paste(col2rgb(col), collapse=","), ")", sep="")
 }
 
 devColAlphaToSVG <- function(colAlpha) {
@@ -84,7 +85,7 @@ devColAlphaToSVG <- function(colAlpha) {
 }
 
 devFontSizeToSVG <- function(fontsize, dev) {
-    paste(round(fontsize/72*dev@res, 2), "px", sep="")
+    round(fontsize/72 * dev@res, 2)
 }
 
 devLineJoinToSVG <- function(linejoin, dev) {
@@ -268,6 +269,13 @@ devParToSVGStyle <- function(gp, dev) {
             else
                 gp$fontsize <- (get.gpar("fontsize")[[1]] * gp$cex)
         }
+        # Do the same for "lex"
+        if ("lex" %in% names(gp)) {
+            if ("lwd" %in% names(gp))
+                gp$lwd <- (gp$lwd * gp$lex)
+            else
+                gp$lwd <- (get.gpar("lwd")[[1]] * gp$lex)
+        }
         # Scale lty by lwd
         if ("lty" %in% names(gp)) {
             if ("lwd" %in% names(gp)) {
@@ -323,21 +331,22 @@ setMethod("inchToDevY", signature(device="svgDevice"),
 setMethod("devArrow", signature(device="svgDevice"),
           function(arrow, gp, device) {
             # Angle is specified for the arrowhead in degrees, need radians
-            ratAngle <- arrow$angle
-            ratAngle <- ratAngle * (pi / 180)
+            ratAngle <- (pi / 180) * arrow$angle
 
-            # We know the length, it is the adjacent line, need to find the
+            # We know the length, it is the hypotenuse, need to find the
             # length of the opposite line for the entire arrowhead, not
             # just one half
-            midpoint <- tan(ratAngle) * arrow$length
+            midpoint <- sin(ratAngle) * arrow$length
             arrowWidth <- midpoint * 2
-            
-            xs <- unit.c(unit(0, "inches"), arrow$length, unit(0, "inches"))
+            xmult <- cos(ratAngle)
+            arrowX <- xmult * arrow$length
+
+            xs <- unit.c(unit(0, "inches"), arrowX, unit(0, "inches"))
             ys <- unit.c(unit(0, "inches"), midpoint, arrowWidth)
             x <- cx(xs, device)
             y <- cy(ys, device)
 
-            svgMarker(x, y, arrow$type, arrow$ends, arrow$name,
+            svgMarker(x, y, arrow$type, arrow$ends, sign(xmult), arrow$name,
                       devParToSVGStyle(gp, device), device@dev)
           })
           
@@ -365,7 +374,7 @@ setMethod("devPath", signature(device="svgDevice"),
 setMethod("devRaster", signature(device="svgDevice"),
           function(raster, gp, device) {
             svgRaster(raster$x, raster$y, raster$width, raster$height,
-                      raster$datauri,
+                      raster$angle, raster$datauri,
                       raster$name, raster$just, raster$vjust, raster$hjust,
                       listToSVGAttrib(raster$attributes), device@links,
                       device@show, devParToSVGStyle(gp, device), device@dev)
@@ -373,29 +382,24 @@ setMethod("devRaster", signature(device="svgDevice"),
 
 setMethod("devRect", signature(device="svgDevice"),
           function(rect, gp, device) {
-            svgRect(rect$x, rect$y, rect$width, rect$height, rect$name,
+            svgRect(rect$x, rect$y, rect$width, rect$height, rect$angle,
+                    rect$name,
                     device@attrs, device@links, device@show,
                     devParToSVGStyle(gp, device), device@dev)
           })
 
 setMethod("devText", signature(device="svgDevice"),
           function(text, gp, device) {
-            # Draw SVG text with fill = col
-            if (is.null(gp$col)) {
-              gp$fill <- "black"
-              gp$fillAlpha <- 255
-            } else {
-              gp$fill <- gp$col
-              gp$fillAlpha <- gp$colAlpha
-            }
-
-            svgText(text$x, text$y, text$text,
-                    text$hjust, text$vjust, text$rot,
-                    text$width, text$height, text$ascent, text$descent,
-                    text$lineheight, text$charheight, text$fontheight,
-                    text$fontfamily, text$fontface, text$name,
-                    device@attrs, device@links, device@show,
-                    devParToSVGStyle(gp, device), device@dev)
+              # SVG text will use fill, but fill has already been
+              # set to col back in primToDev.text() in griddev.R
+              svgText(text$x, text$y, text$text,
+                      text$hjust, text$vjust, text$rot,
+                      text$width, text$height, text$angle,
+                      text$ascent, text$descent,
+                      text$lineheight, text$charheight, text$fontheight,
+                      text$fontfamily, text$fontface, text$name,
+                      device@attrs, device@links, device@show,
+                      devParToSVGStyle(gp, device), device@dev)
           })
 
 setMethod("devCircle", signature(device="svgDevice"),
@@ -405,15 +409,139 @@ setMethod("devCircle", signature(device="svgDevice"),
                       devParToSVGStyle(gp, device), device@dev)
           })
 
+setMethod("devStartElement", signature(device="svgDevice"),
+          function(element, gp, device) {
+            # Ignore gp, complicates output
+            svgStartElement(id = element$id,
+                            classes = element$classes,
+                            element = element$name,
+                            attrs = element$attrs,
+                            namespace = element$namespace,
+                            namespaceDefinitions = element$namespaceDefinitions,
+                            attributes = device@attrs,
+                            links = device@links,
+                            show = device@show,
+                            svgdev = device@dev)
+          })
+
+setMethod("devEndElement", signature(device="svgDevice"),
+          function(name, device) {
+            svgEndElement(name, device@links, device@dev)
+          })
+
+setMethod("devTextNode", signature(device="svgDevice"),
+          function(text, device) {
+            svgTextNode(text$text, device@dev)
+          })
+
+setMethod("devStartClip", signature(device="svgDevice"),
+          function(clip, gp, device) {
+            svgClipPath(clip$name, clip$x, clip$y,
+                        clip$width, clip$height, device@dev)
+
+            # Because of the fact that we never stop clipping until
+            # we pop our current viewport, we need to store information
+            # on how many times we have clipped.
+            # This allows us to traverse back up the appropriate number
+            # of SVG <g>s.
+            cl <- get("contextLevels", envir = .gridSVGEnv)
+            cl[length(cl)] <- cl[length(cl)] + 1
+            assign("contextLevels", cl, envir = .gridSVGEnv)
+
+            # Can hard-code 'clip' and 'coords' because we're always clipping
+            # but we're not a viewport.
+            # 'style' is always going to be NULL too.
+            svgStartGroup(clip$name, clip=TRUE,
+                          attributes=device@attrs,
+                          links=device@links,
+                          show=device@show,
+                          style=devParToSVGStyle(gp, device),
+                          coords = NULL,
+                          classes = clip$classes,
+                          svgdev=device@dev)
+          })
+
+setMethod("devStartClipPath", signature(device="svgDevice"),
+          function(clippath, gp, device) {
+            svgStartGrobClipPath(clippath$name, device@dev)
+          })
+
+setMethod("devEndClipPath", signature(device="svgDevice"),
+          function(clippath, gp, device) {
+            svgEndGrobClipPath(device@dev)
+          })
+
+setMethod("devStartClipPathGroup", signature(device="svgDevice"),
+          function(clippath, gp, device) {
+            svgStartGrobClipPathGroup(clippath$name, clippath$cp,
+                                      clippath$classes, device@dev)
+
+            # Because of the fact that we never stop clipping until
+            # we pop our current viewport, we need to store information
+            # on how many times we have clipped.
+            # This allows us to traverse back up the appropriate number
+            # of SVG <g>s.
+            cl <- get("contextLevels", envir = .gridSVGEnv)
+            cl[length(cl)] <- cl[length(cl)] + 1
+            assign("contextLevels", cl, envir = .gridSVGEnv)
+            # Also note the ID because we're pushing a context, makes it
+            # easier to locate later
+            assign("contextNames",
+                   c(get("contextNames", envir = .gridSVGEnv), clippath$name),
+                   envir = .gridSVGEnv)
+          })
+
+setMethod("devStartMask", signature(device="svgDevice"),
+          function(mask, gp, device) {
+            svgStartMask(mask$name, mask$x, mask$y, mask$width,
+                         mask$height, device@dev)
+          })
+
+setMethod("devEndMask", signature(device="svgDevice"),
+          function(mask, gp, device) {
+            svgEndMask(device@dev)
+          })
+
+setMethod("devStartMaskGroup", signature(device="svgDevice"),
+          function(mask, gp, device) {
+            svgStartMaskGroup(mask$name, mask$mask,
+                              mask$classes, device@dev)
+
+            # Because of the fact that we never stop clipping until
+            # we pop our current viewport, we need to store information
+            # on how many times we have clipped.
+            # This allows us to traverse back up the appropriate number
+            # of SVG <g>s.
+            cl <- get("contextLevels", envir = .gridSVGEnv)
+            cl[length(cl)] <- cl[length(cl)] + 1
+            assign("contextLevels", cl, envir = .gridSVGEnv)
+            # Also note the ID because we're pushing a context, makes it
+            # easier to locate later
+            assign("contextNames",
+                   c(get("contextNames", envir = .gridSVGEnv), mask$name),
+                   envir = .gridSVGEnv)
+          })
+
 setMethod("devStartGroup", signature(device="svgDevice"),
           function(group, gp, device) {
-            clip <- FALSE
-            if (! is.null(group$clip)) {
-              if (group$clip) {
-                clip <- TRUE
-                svgClipPath(group$name, group$vpx, group$vpy,
-                            group$vpw, group$vph, device@dev)
+              clip <- FALSE
+              if (! is.null(group$clip)) {
+                  if (group$clip) {
+                      clip <- TRUE
+                      svgClipPath(group$name, group$vpx, group$vpy,
+                                  group$vpw, group$vph, group$angle,
+                                  device@dev)
+                  }
               }
+
+            # If we're starting a VP, then allow for "contexts" to be
+            # added to children of this VP. A context is a clip path
+            # or mask. Coords are only present via VPs.
+            if (! is.null(group$coords)) {
+
+              assign("contextLevels",
+                     c(get("contextLevels", envir = .gridSVGEnv), 0),
+                     envir = .gridSVGEnv)
             }
 
             svgStartGroup(group$name, clip=clip,
@@ -422,12 +550,13 @@ setMethod("devStartGroup", signature(device="svgDevice"),
                           show=device@show,
                           style=devParToSVGStyle(gp, device),
                           coords = group$coords,
+                          classes = group$classes,
                           svgdev=device@dev)
           })
 
 setMethod("devEndGroup", signature(device="svgDevice"),
-          function(name, device) {
-            svgEndGroup(name, device@links, device@dev)
+          function(name, vp, device) {
+            svgEndGroup(name, device@links, vp, device@dev)
           })
 
 setMethod("devStartSymbol", signature(device="svgDevice"),
@@ -448,6 +577,7 @@ setMethod("devEndSymbol", signature(device="svgDevice"),
 setMethod("devUseSymbol", signature(device="svgDevice"),
           function(point, gp, device) {
             svgUseSymbol(point$name, point$x, point$y, point$size, point$pch,
+                         point$angle,
                          device@attrs, device@links, device@show,
                          devParToSVGStyle(gp, device), device@dev)
           })

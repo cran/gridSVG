@@ -1,24 +1,23 @@
 \name{grid.animate}
 \alias{grid.animate}
 \alias{animateGrob}
-%- Also NEED an '\alias' for EACH other topic documented here.
 \title{ Animate a grid grob }
 \description{
   Creates an animated.grob object.
   Useful in conjunction with
-  \code{gridToSVG}, to produce an SVG document with
+  \code{grid.export}, to produce an SVG document with
   animated graphical elements.
 }
 \usage{
 animateGrob(grob, ...,
-            duration=1, 
+            duration=1,
             rep=FALSE, revert=FALSE,
-            begin=0, interpolate="linear", group=FALSE) 
-grid.animate(path, ...) 
+            begin=0, interpolate="linear", group=FALSE)
+grid.animate(path, ..., group=FALSE, redraw = FALSE,
+             strict=FALSE, grep=FALSE, global=FALSE)
 }
-%- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{grob}{A grob.}
+  \item{grob}{ A grob to add animation to. }
   \item{path}{ A grob path specifying a drawn grob. }
   \item{\dots}{ Arguments of the grob to animate. }
   \item{duration}{ The duration in seconds of the animation. }
@@ -33,10 +32,25 @@ grid.animate(path, ...)
   \item{group}{ A logical indicating whether the animation values
     should be applied to the overall group element in SVG or
     to individual SVG elements.}
+  \item{redraw}{
+    A logical value to indicate whether to redraw the grob.
+  }
+  \item{strict}{
+    A boolean indicating whether the \code{path} must be matched
+    exactly.
+  }
+  \item{grep}{
+    Whether the \code{path} should be treated as a regular expression.
+  }
+  \item{global}{
+    A boolean indicating whether the function should affect just the
+    first match of the \code{path}, or whether all matches should be
+    affected.
+  }
 }
 \value{
   An animated.grob object.
 }
 \author{ Paul Murrell }
-\seealso{ \code{\link{gridToSVG}} }                           
-\keyword{ dplot }% at least one, from doc/KEYWORDS
+\seealso{ \code{\link{grid.export}} }
+\keyword{ dplot }

@@ -57,6 +57,8 @@ as.animValue(x, ...)
 \code{\link{grid.animate}}
 }
 \examples{
+require(grid)
+
 animValue(c("visible", "hidden"))
 animUnit(unit(1:24, "in"),
          timeid=rep(1:3, each=8),

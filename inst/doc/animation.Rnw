@@ -26,6 +26,7 @@ file \code{"animCircle.svg"}, which can be viewed in a web
 browser).
 
 <<>>=
+library(grid)
 library(gridSVG)
 @ 
 

@@ -1,4 +1,5 @@
 
+library(grid)
 require(gridSVG)
 
     grid.polyline(x=outer(c(0, .5, 1, .5), 5:1/5),
@@ -6,4 +7,4 @@ require(gridSVG)
                   id.lengths=rep(4, 5),
                   gp=gpar(col=1:5, lwd=3))
   
-gridToSVG("polyline.svg")
+grid.export("polyline.svg")

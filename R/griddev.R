@@ -3,6 +3,12 @@ vpError <- function() {
   stop("vp should only be path")
 }
 
+# Wrapper for accessing cumulative rotation from current viewport
+# (Ideally this should be in 'grid')
+current.angle <- function() {
+    grid:::grid.Call("L_currentViewport")$rotation
+}
+
 # Functions to take a grid grob and call appropriate
 # functions from dev.R to produce output on a device
 
@@ -50,15 +56,23 @@ baseGrobName <- function(subGrobName,
   grobName
 }
 
+prefixName <- function(name) {
+  paste0(get("prefix", envir = .gridSVGEnv), name)
+}
+
 # Convert a gpar object to an device-neutral graphical parameter list
 gparToDevPars <- function(gp) {
     # Split up col into col plus colAlpha
     if (!is.null(gp$col)) {
+        if (is.numeric(gp$col) && gp$col == 0)
+            gp$col <- "transparent"
         rgba <- col2rgb(gp$col, alpha=TRUE)
         gp$colAlpha <- rgba[4]
     }
     # Ditto fill
     if (!is.null(gp$fill)) {
+        if (is.numeric(gp$fill) && gp$fill == 0)
+            gp$fill <- "transparent"
         rgba <- col2rgb(gp$fill, alpha=TRUE)
         gp$fillAlpha <- rgba[4]
     }
@@ -67,6 +81,8 @@ gparToDevPars <- function(gp) {
 
 # Repeats all elements in a gpar() so that it is fully defined for n values
 expandGpar <- function(gp, n) {
+    if (is.null(gp))
+        return(gpar())
     # If there are actually gpar elements defined, repeat them
     if (length(gp) > 0) {
         for (i in 1:length(gp)) {
@@ -199,16 +215,17 @@ changedGPar <- function(startGP, endGP) {
 startGroup <- function(vp, depth, dev) {
     if (depth > 1)
         startGroup(vp$parent, depth - 1, dev)
+    vp$classes <- class(vp)
     devStartGroup(devGrob(vp, dev), gparToDevPars(vp$gp), dev)
 }
 enforceVP <- function(vp, dev) {
     depth <- 0
     if (!is.null(vp)) {
         if (!inherits(vp, "vpPath")) {
-            pushViewport(vp)
+            pushViewport(vp, recording=FALSE)
             depth <- grid:::depth(vp)
         } else {
-            depth <- downViewport(vp)
+            depth <- downViewport(vp, recording=FALSE)
         }
         startGroup(grid:::grid.Call("L_currentViewport"), depth, dev)
     }
@@ -217,14 +234,8 @@ enforceVP <- function(vp, dev) {
 unwindVP <- function(vp, depth, dev) {
     if (depth > 0) {
         for (i in 1:depth)
-            devEndGroup("", dev)
-        if (is.null(vp)) { # recorded pops or ups
-            upViewport(depth)
-        } else if (!inherits(vp, "vpPath")) {
-            popViewport(depth)
-        } else {
-            upViewport(depth)
-        }
+            devEndGroup("", TRUE, dev)
+        upViewport(depth, recording=FALSE)
     }
 }
 
@@ -241,23 +252,10 @@ grobToDev.default <- function(x, dev) {
 
 grobToDev.grob <- function(x, dev) {
   depth <- enforceVP(x$vp, dev)
+  x$classes <- class(x)
   primToDev(x, dev)
   unwindVP(x$vp, depth, dev)
-}
-
-# roundrect has its own preDrawDetails so ...
-grobToDev.roundrect <- function(x, dev) {
-    depth <- enforceVP(x$vp, dev)
-    rrvp <- viewport(x$x, x$y, x$width, x$height, just=x$just)
-    rrdepth <- enforceVP(rrvp, dev)
-
-    boundary <- grid:::rrpoints(x)
-    primToDev(polygonGrob(boundary$x, boundary$y,
-                          gp=x$gp, name=x$name),
-              dev)
-
-    unwindVP(rrvp, rrdepth, dev)
-    unwindVP(x$vp, depth, dev)
+  progressStep("grob")
 }
 
 # grob to device grob
@@ -268,7 +266,7 @@ devGrob <- function(x, dev) {
 }
 
 devGrob.default <- function(x, dev) {
-  list(name=x$name)
+  list(name=x$name, classes=x$classes)
 }
 
 moveToGen <- function() {
@@ -292,10 +290,12 @@ moveToGen <- function() {
             result <- list(x=c(curx, cx(loc$x, dev)),
                            y=c(cury, cy(loc$y, dev)),
                            arrow=list(ends = ends),
+                           classes=x$classes,
                            name=x$name)
         } else {
             result <- list(x=c(curx, cx(loc$x, dev)),
                            y=c(cury, cy(loc$y, dev)),
+                           classes=x$classes,
                            name=x$name)
         }
         curx <<- cx(loc$x, dev)
@@ -325,10 +325,12 @@ devGrob.lines <- function(x, dev) {
       list(x=cx(loc$x, dev),
            y=cy(loc$y, dev),
            arrow=list(ends = ends),
+           classes=x$classes,
            name=x$name)
   } else {
       list(x=cx(loc$x, dev),
            y=cy(loc$y, dev),
+           classes=x$classes,
            name=x$name)
   }
 }
@@ -337,8 +339,10 @@ devGrob.points <- function(x, dev) {
   loc <- locToInches(x$x, x$y, dev)
   list(name = x$name,
        x = cx(loc$x, dev),
-       y = cx(loc$y, dev),
+       y = cy(loc$y, dev),
        size = cd(dToInches(x$size), dev),
+       angle = current.angle(),
+       classes = x$classes,
        pch = x$pch)
 }
 
@@ -346,6 +350,7 @@ devGrob.polygon <- function(x, dev) {
   loc <- locToInches(x$x, x$y, dev)
   list(x=cx(loc$x, dev),
        y=cy(loc$y, dev),
+       classes=x$classes,
        name=x$name)
 }
 
@@ -358,6 +363,7 @@ devGrob.pathgrob <- function(x, dev) {
         list(x=cx(loc$x, dev),
              y=cy(loc$y, dev),
              rule=x$rule,
+             classes=x$classes,
              name=x$name)
     } else {
         if (is.null(x$id)) {
@@ -376,6 +382,7 @@ devGrob.pathgrob <- function(x, dev) {
              y=lapply(listLoc,
                function(loc, dev) { cy(loc$y, dev) }, dev),
              rule=x$rule,
+             classes=x$classes,
              name=x$name)
     }
 }
@@ -388,7 +395,9 @@ devGrob.rastergrob <- function(x, dev) {
        y=cy(lb$y, dev),
        width=cw(dim$w, dev),
        height=ch(dim$h, dev),
+       angle=current.angle(),
        datauri=x$datauri,
+       classes=x$classes,
        name=x$name)
 }
 
@@ -399,6 +408,8 @@ devGrob.rect <- function(x, dev) {
        y=cy(lb$y, dev),
        width=cw(dim$w, dev),
        height=ch(dim$h, dev),
+       angle=current.angle(),
+       classes=x$classes,
        name=x$name)
 }
 
@@ -410,7 +421,8 @@ devGrob.text <- function(x, dev) {
   # determine line height.  This does WAAAAY back so we just
   # have to swallow and follow along.
   # textLineHeight <-  ch(charHeight * gp$lineheight, dev)
-  textLineHeight <- ch(unit(gp$lineheight * gp$cex *
+  xcex <- if (is.null(x$gp$cex)) 1 else x$gp$cex
+  textLineHeight <- ch(unit(gp$lineheight * gp$cex * xcex *
                             graphics::par("cin")[2], "inches"), dev)
   charHeight <- ch(charHeight, dev)
   
@@ -421,7 +433,6 @@ devGrob.text <- function(x, dev) {
   #   comment in row for 'baseline-shift' in the 'percentages' column
   # This is needed for positioning plotmath expressions
   # to anything close to the right place
-  xcex <- if (is.null(x$gp$cex)) 1 else x$gp$cex
   fontHeight <- ch(unit(gp$fontsize * gp$cex * xcex/ 72, "inches"), dev)
 
   # Width of the text/expression
@@ -458,6 +469,7 @@ devGrob.text <- function(x, dev) {
        rot=x$rot,
        width=width,
        height=height,
+       angle=current.angle(),
        ascent=ascent,
        descent=descent,
        lineheight=textLineHeight,
@@ -466,6 +478,7 @@ devGrob.text <- function(x, dev) {
        fontfamily=gp$fontfamily,
        fontface=switch(gp$font,
          "plain", "bold", "italic", "bold.italic"),
+       classes=x$classes,
        name=x$name)  
 }
 
@@ -474,39 +487,60 @@ devGrob.circle <- function(x, dev) {
   list(x=cx(loc$x, dev),
        y=cy(loc$y, dev),
        r=cd(dToInches(x$r), dev),
+       classes=x$classes,
        name=x$name)
 }
 
-# Because viewports can be pushed into many times, and each
-# time we push we start a group, we need a *unique* id for that
-# group, otherwise clipping paths don't work correctly
-getvpID <- function(vpname) {
-  # Finding out how many times a VP has been pushed to so fara
-  vput <- get("vpUsageTable", envir = .gridSVGEnv)
-  vpcount <- vput[vput$vpname == vpname, "count"]
+# Because viewports and grobs can be used many times, and each
+# time we use one we start a group, we need a *unique* id for that
+# group, otherwise things like clipping paths don't work correctly
+#
+# 'append' determines whether we add our ID to the usageTable. Useful
+# not to in cases like animated grobs
+getID <- function(name, type, append = TRUE) {
+  # If this is a grob or ref, only modify if we're trying to ensure
+  # uniqueness. We *really* need to do this for viewports though, so
+  # viewports are a special case.
+  if (type != "vp" && ! get("uniqueNames", envir = .gridSVGEnv))
+      return(name)
 
-  # If the VP name is not in the usage table, add it
-  if (length(vpcount) == 0) {
-    vpcount <- 0
-    assign("vpUsageTable", rbind(vput,
-                                 data.frame(vpname = vpname,
-                                            count = vpcount,
-                                            stringsAsFactors = FALSE)),
-           envir = .gridSVGEnv)
-    vput <- get("vpUsageTable", envir = .gridSVGEnv)
+  # Finding out how many times a VP or grob has been used so far
+  ut <- get("usageTable", envir = .gridSVGEnv)
+  suffix <- ut[ut$name == name, "suffix"]
+
+  suffix <-
+    if (length(suffix) == 0)
+      1
+    else
+      max(suffix) + 1
+
+  # Test if there are any existing names that might clash.
+  # For example rect.1 has rect.1.1 children, test whether
+  # these child names might clash.
+  candidateName <- paste(name, suffix, sep = getSVGoption("id.sep"))
+  while (length(ut[ut$name == candidateName, "suffix"])) {
+    # Just increment the suffix number by 1 each time, should (eventually)
+    # give us a unique number
+    suffix <- suffix + 1
+    candidateName <- paste(name, suffix, sep = getSVGoption("id.sep"))
   }
 
-  # Incrementing the vp appearance counter and storing it
-  vpcount <- vpcount + 1
-  vput[vput$vpname == vpname, "count"] <- vpcount
-  assign("vpUsageTable", vput, envir = .gridSVGEnv)
+  if (append) {
+    sel <- prefixName(escapeSelector(candidateName))
+    xp <- prefixName(escapeXPath(candidateName))
+    assign("usageTable",
+           rbind(ut,
+                 data.frame(name = name,
+                            suffix = suffix,
+                            type = type,
+                            selector = sel,
+                            xpath = xp,
+                            stringsAsFactors = FALSE)),
+           envir = .gridSVGEnv)
+  }
 
-  vpID <- paste(vpname,
-                vpcount,
-                sep=".")
-
-  # Returning the vpID
-  vpID
+  # Returning the new ID
+  paste(name, suffix, sep = getSVGoption("id.sep"))
 }
 
 getCoordsInfo <- function(vp, tm, dev) {
@@ -520,6 +554,7 @@ getCoordsInfo <- function(vp, tm, dev) {
                  y = round(cy(unit(loc[2], "inches"), dev), 2),
                  width = round(cw(unit(1, "npc"), dev), 2),
                  height = round(ch(unit(1, "npc"), dev), 2),
+                 angle = current.angle(),
                  xscale = vp$xscale,
                  yscale = vp$yscale,
                  inch = round(cw(unit(1, "inches"), dev), 2))
@@ -528,28 +563,40 @@ getCoordsInfo <- function(vp, tm, dev) {
 
 devGrob.viewport <- function(x, dev) {
   vp <- x
-  vpname <- as.character(current.vpPath())
+  # Modify the path so that we can use a different separator
+  if (get("use.vpPaths", envir = .gridSVGEnv)) {
+    vpname <- as.character(current.vpPath())
+    splitPath <- strsplit(vpname, grid:::.grid.pathSep)[[1]]
+    vpname <- paste(splitPath, collapse = getSVGoption("vpPath.sep"))
+  } else {
+    vpname <- vp$name
+  }
   coords <- getCoordsInfo(vp, current.transform(), dev)
 
   if (is.null(vp$clip)) {
       clip <- FALSE
-      list(name=getvpID(vpname), clip=clip, coords=coords)
+      list(name=getID(vpname, "vp"), clip=clip,
+           coords=coords, classes=x$classes)
   } else if (is.na(vp$clip)) {
       # Clipping has been turned OFF
       # FIXME:  CANNOT do this in SVG (enlarge the clip path)
       clip <- FALSE
-      list(name=getvpID(vpname), clip=clip, coords=coords)
+      list(name=getID(vpname, "vp"), clip=clip,
+           coords=coords, classes=x$classes)
   } else if (! vp$clip) {
       clip <- FALSE
-      list(name=getvpID(vpname), clip=clip, coords=coords)
+      list(name=getID(vpname, "vp"), clip=clip,
+           coords=coords, classes=x$classes)
   } else {
       clip <- TRUE
       list(vpx=coords$x,
            vpy=coords$y,
            vpw=coords$width,
            vph=coords$height,
-           name=getvpID(vpname),
+           angle=current.angle(),
+           name=getID(vpname, "vp"),
            clip=clip,
+           classes=x$classes,
            coords=coords)
   }
 }
@@ -559,15 +606,15 @@ devGrob.vpPath <- function(x, dev) {
   tm <- current.transform()
   if (is.null(vp$clip)) {
       clip <- FALSE
-      list(name=getvpID(vp$name), clip=clip)
+      list(name=getID(vp$name, "vp"), clip=clip, classes=x$classes)
   } else if (is.na(vp$clip)) {
       # Clipping has been turned OFF
       # FIXME:  CANNOT do this in SVG (enlarge the clip path)
       clip <- FALSE
-      list(name=getvpID(vp$name), clip=clip)
+      list(name=getID(vp$name, "vp"), clip=clip, classes=x$classes)
   } else if (! vp$clip) {
       clip <- FALSE
-      list(name=getvpID(vp$name), clip=clip)
+      list(name=getID(vp$name, "vp"), clip=clip, classes=x$classes)
   } else {
       clip <- TRUE
 
@@ -578,57 +625,22 @@ devGrob.vpPath <- function(x, dev) {
            vpy=cy(unit(loc[2], "inches"), dev),
            vpw=cw(unit(1, "npc"), dev),
            vph=ch(unit(1, "npc"), dev),
-           name=getvpID(vp$name),
+           name=getID(vp$name, "vp"),
+           classes=x$classes,
            clip=clip)
   }  
 }
 
-devGrob.frame <- function(x, dev) {
-  fvp <- x
-  tm <- current.transform()
-  if (is.null(fvp$clip)) {
-    clip <- FALSE
-    list(name=x$name, clip=clip)
-  } else if (is.na(fvp$clip) | ! fvp$clip) {
-    clip <- FALSE
-    list(name=x$name, clip=clip)
-  } else {
-    clip <- TRUE
-
-    transloc <- c(0, 0, 1) %*% tm
-    loc <- (transloc / transloc[3])[-3]
-
-    list(vpx=cx(unit(loc[1], "inches"), dev),
-         vpy=cy(unit(loc[2], "inches"), dev),
-         vpw=cw(unit(1, "npc"), dev),
-         vph=ch(unit(1, "npc"), dev),
-         name=x$name,    
-         clip=clip)
-  }  
-}
-
-devGrob.cellGrob <- function(x, dev) {
-  cvp <- x
-  tm <- current.transform()
-  if (is.null(cvp$clip)) {
-    clip <- FALSE
-    list(name=x$name, clip=clip)
-  } else if (is.na(cvp$clip) | ! cvp$clip) {
-    clip <- FALSE
-    list(name=x$name, clip=clip)
-  } else {
-    clip <- TRUE
-
-    transloc <- c(0, 0, 1) %*% tm
-    loc <- (transloc / transloc[3])[-3]
-
-    list(vpx=cx(unit(loc[1], "inches"), dev),
-         vpy=cy(unit(loc[2], "inches"), dev),
-         vpw=cw(unit(1, "npc"), dev),
-         vph=ch(unit(1, "npc"), dev),
-         name=x$name,    
-         clip=clip)
-  }  
+devGrob.clip <- function(x, dev) {
+  # Should be similar to a rect in description, because this is a clipping rect
+  lb <- leftbottom(x$x, x$y, x$width, x$height, x$just, x$hjust, x$vjust, dev)
+  dim <- dimToInches(x$width, x$height, dev)
+  list(x=cx(lb$x, dev),
+       y=cy(lb$y, dev),
+       width=cw(dim$w, dev),
+       height=ch(dim$h, dev),
+       classes=x$classes,
+       name=getID(x$name, "grob"))
 }
 
 # Prim to Dev
@@ -653,15 +665,22 @@ arrowAddName <- function(arrow, name) {
        name = name)
 }
 
+primToDev.clip <- function(x, dev) {
+    devStartClip(devGrob(x, dev), NULL, dev)
+}
 
 primToDev.move.to <- function(x, dev) {
     devGrob(x, dev)
 }
 
 primToDev.line.to <- function(x, dev) {
-    # NOTE:  MUST NOT evaluate devGrob() more than once
-    #        because it has side-effects (within its closure)
-    dgrob <- devGrob(x, dev)
+  # NOTE:  MUST NOT evaluate devGrob() more than once
+  #        because it has side-effects (within its closure)
+  dgrob <- devGrob(x, dev)
+
+  dgrob$name <- getID(dgrob$name, "grob")
+  x$name <- getID(x$name, "grob")
+
   # Grouping the grob
   devStartGroup(dgrob, NULL, dev)
 
@@ -675,10 +694,12 @@ primToDev.line.to <- function(x, dev) {
   devLines(dgrob, gparToDevPars(x$gp), dev)
 
   # Ending the group
-  devEndGroup(x$name, dev)
+  devEndGroup(x$name, FALSE, dev)
 }
 
 primToDev.lines <- function(x, dev) {
+  x$name <- getID(x$name, "grob")
+
   # Grouping the grob
   devStartGroup(devGrob(x, dev), NULL, dev)
 
@@ -694,10 +715,12 @@ primToDev.lines <- function(x, dev) {
 
   # Ending the group
   x$name <- oldname
-  devEndGroup(x$name, dev)
+  devEndGroup(x$name, FALSE, dev)
 }
 
 primToDev.polyline <- function(x, dev) {
+  x$name <- getID(x$name, "grob")
+
   # If we only have one line
   if (is.null(x$id) && is.null(x$id.lengths)) {
       x$id <- rep(1L, length(x$x))
@@ -715,6 +738,7 @@ primToDev.polyline <- function(x, dev) {
   # Each line has an id, grab corresponding positions
   listX <- split(x$x, id)
   listY <- split(x$y, id)
+  n <- length(listX)
 
   # Gp needs to be defined for each sub-grob, as does arrow
   gp <- expandGpar(x$gp, n)
@@ -738,7 +762,7 @@ primToDev.polyline <- function(x, dev) {
   }
 
   # Ending the group
-  devEndGroup(x$name, dev)
+  devEndGroup(x$name, FALSE, dev)
 }
 
 # Any more efficient way of doing this?
@@ -753,6 +777,8 @@ primToDev.segments <- function(x, dev) {
   # Gp needs to be defined for each sub-grob, as does arrow
   gp <- expandGpar(x$gp, n)
   arrows <- expandArrow(x$arrow, n)
+
+  x$name <- getID(x$name, "grob")
 
   # Grouping each sub-grob
   devStartGroup(devGrob(x, dev), NULL, dev)
@@ -772,7 +798,7 @@ primToDev.segments <- function(x, dev) {
   }
 
   # Ending the group
-  devEndGroup(x$name, dev)
+  devEndGroup(x$name, FALSE, dev)
 }
 
 primToDev.polygon <- function(x, dev) {
@@ -793,9 +819,13 @@ primToDev.polygon <- function(x, dev) {
   # Each polygon has an id, grab corresponding positions
   listX <- split(x$x, id)
   listY <- split(x$y, id)
+  # May have id.length == 0 so use # of groups
+  n <- length(listX)
 
   # Gp needs to be defined for each sub-grob
   gp <- expandGpar(x$gp, n)
+
+  x$name <- getID(x$name, "grob")
 
   # Grouping each sub-grob
   devStartGroup(devGrob(x, dev), NULL, dev)
@@ -812,7 +842,24 @@ primToDev.polygon <- function(x, dev) {
   }
 
   # Ending the group
-  devEndGroup(x$name, dev)
+  devEndGroup(x$name, FALSE, dev)
+}
+
+trim <- function(points) {
+    n <- length(points$x)
+    if (n > 2) {
+        remove <- 1
+        while (remove < n &&
+               points$x[1] == points$x[1 + remove] &&
+               points$y[1] == points$y[1 + remove]) {
+            remove <- remove + 1
+        }
+        if (remove > 1) {
+            points$x <- points$x[-(1:(remove - 1))]
+            points$y <- points$y[-(1:(remove - 1))]            
+        }
+    }
+    points
 }
 
 primToDev.xspline <- function(x, dev) {
@@ -821,15 +868,9 @@ primToDev.xspline <- function(x, dev) {
   splineToGrob <- function(spline) {
     splinePoints <- xsplinePoints(spline)
     if (spline$open) {
-        # Treating as a line because unclosed paths are not filled.
-        # svgPath() assumes all paths are closed to allow for filling
-        # but we are unable to supply parameters to it to allow for 
-        # open paths
-        splineGp <- spline$gp
-        splineGp$fill <- "transparent"
         linesGrob(x = splinePoints$x,
                   y = splinePoints$y,
-                  gp = splineGp,
+                  gp = spline$gp,
                   arrow = spline$arrow,
                   default.units = spline$default.units,
                   name = spline$name)
@@ -859,6 +900,7 @@ primToDev.xspline <- function(x, dev) {
   # Each xspline has an id, grab corresponding positions
   listX <- split(x$x, id)
   listY <- split(x$y, id)
+  n <- length(listX)
 
   # If x$shape is not defined for each point, repeat it for all points
   pointShapes <- rep(x$shape, length.out = length(x$x))
@@ -871,6 +913,8 @@ primToDev.xspline <- function(x, dev) {
   # Gp needs to be defined for each sub-grob, as does arrow
   gp <- expandGpar(x$gp, n)
   arrows <- expandArrow(x$arrow, n)
+
+  x$name <- getID(x$name, "grob")
 
   # Grouping each sub-grob
   devStartGroup(devGrob(x, dev), NULL, dev)
@@ -891,17 +935,32 @@ primToDev.xspline <- function(x, dev) {
       if (inherits(sg, "pathgrob")) {
           devPath(devGrob(sg, dev), gparToDevPars(sg$gp), dev)
       } else {
-          if (! is.null(sg$arrow))
-              devArrow(arrowAddName(sg$arrow, sg$name), gparToDevPars(sg$gp), dev)
-          devLines(devGrob(sg, dev), gparToDevPars(sg$gp), dev)
+          dg <- devGrob(sg, dev)
+          if (! is.null(sg$arrow)) {
+              devArrow(arrowAddName(sg$arrow, sg$name),
+                       gparToDevPars(sg$gp), dev)
+              # The arrow orientation is determined "auto"matically by
+              # the SVG renderer, so we need to avoid identical values
+              # at start or end of points (this has been done in
+              # xsplinePoints(), but we need to do it again here because
+              # we will be rounding to 2 dp for SVG output!)
+              dgTrimFront <- trim(list(x=round(dg$x, 2), y=round(dg$y, 2)))
+              dgTrimBack <- trim(list(x=rev(dgTrimFront$x),
+                                      y=rev(dgTrimFront$y)))
+              dg$x <- rev(dgTrimBack$x)
+              dg$y <- rev(dgTrimBack$y)
+          }
+          devLines(dg, gparToDevPars(sg$gp), dev)
       }
   }
 
   # Ending the group
-  devEndGroup(x$name, dev)
+  devEndGroup(x$name, FALSE, dev)
 }
 
 primToDev.pathgrob <- function(x, dev) {
+  x$name <- getID(x$name, "grob")
+
   # Grouping the grob
   devStartGroup(devGrob(x, dev), NULL, dev)
 
@@ -915,7 +974,7 @@ primToDev.pathgrob <- function(x, dev) {
 
   # Ending the group
   x$name <- oldname
-  devEndGroup(x$name, dev)
+  devEndGroup(x$name, FALSE, dev)
 }
 
 primToDev.rastergrob <- function(x, dev) {
@@ -944,12 +1003,26 @@ primToDev.rastergrob <- function(x, dev) {
   # store the raster with as large a dimension as possible.
   rasterDims <- c(ch(max(heights), dev), cw(max(widths), dev))
 
-  png(filename = fileloc, width = rasterDims[2], height = rasterDims[1])
+  olddev <- dev.cur()
+  png(filename = fileloc, width = round(abs(rasterDims[2])),
+      height = round(abs(rasterDims[1])), bg = "transparent")
+      # Need to ensure that the raster is oriented correctly in the (more rare)
+      # case of an xscale or yscale being big -> small
+      # To do this, position natively in a new (temporary) viewport
+      xscale <- if (rasterDims[2] < 0) 1:0
+                else 0:1
+      yscale <- if (rasterDims[1] < 0) 1:0
+                else 0:1
+      pushViewport(viewport(xscale = xscale, yscale = yscale),
+                   recording = FALSE)
       # The raster stays the same and is only repeated for each appearance.
       # Given that we know the dimensions of the PNG, we can safely say that
       # the raster occupies the entireity of both the x and y dimensions.
-      grid.raster(x$raster, width = 1, height = 1, interpolate = x$interpolate)
+      grid.raster(x$raster, width = 1, height = 1, interpolate = x$interpolate,
+                  default.units = "native")
+      popViewport(recording = FALSE)
   dev.off()
+  dev.set(olddev)
 
   # base64 encoding the PNG so we can insert the image as a data URI
   base64Raster <- base64enc(fileloc)
@@ -957,6 +1030,8 @@ primToDev.rastergrob <- function(x, dev) {
 
   # Expand the gp such that it fully defines all sub-grobs
   gp <- expandGpar(x$gp, n)
+
+  x$name <- getID(x$name, "grob")
 
   # Grouping each sub-grob
   devStartGroup(devGrob(x, dev), NULL, dev)
@@ -978,7 +1053,7 @@ primToDev.rastergrob <- function(x, dev) {
   }
 
   # Ending the group
-  devEndGroup(x$name, dev)
+  devEndGroup(x$name, FALSE, dev)
 }
 
 primToDev.rect <- function(x, dev) {
@@ -992,6 +1067,8 @@ primToDev.rect <- function(x, dev) {
 
   # Expand the gp such that it fully defines all sub-grobs
   gp <- expandGpar(x$gp, n)
+
+  x$name <- getID(x$name, "grob")
 
   # Grouping each sub-grob
   devStartGroup(devGrob(x, dev), NULL, dev)
@@ -1011,7 +1088,7 @@ primToDev.rect <- function(x, dev) {
   }
 
   # Ending the group
-  devEndGroup(x$name, dev)
+  devEndGroup(x$name, FALSE, dev)
 }
 
 primToDev.text <- function(x, dev) {
@@ -1039,9 +1116,17 @@ primToDev.text <- function(x, dev) {
     textLabel <- rep(x$label, length.out = n)
   }
 
+  # Force fill to be col for text
+  if (is.null(x$gp))
+      x$gp <- gpar(fill = get.gpar()$col)
+  else
+      x$gp$fill <- if (! is.null(x$gp$col)) x$gp$col
+                   else get.gpar()$col
   
   # Expand the gp such that it fully defines all sub-grobs
   gp <- expandGpar(x$gp, n)
+
+  x$name <- getID(x$name, "grob")
 
   # Grouping each sub-grob
   devStartGroup(devGrob(x, dev), NULL, dev)
@@ -1061,7 +1146,7 @@ primToDev.text <- function(x, dev) {
   }
 
   # Ending the group
-  devEndGroup(x$name, dev)
+  devEndGroup(x$name, FALSE, dev)
 }
 
 primToDev.circle <- function(x, dev) {
@@ -1074,6 +1159,8 @@ primToDev.circle <- function(x, dev) {
 
   # Expand the gp such that it fully defines all sub-grobs
   gp <- expandGpar(x$gp, n)
+
+  x$name <- getID(x$name, "grob")
 
   # Grouping each sub-grob
   devStartGroup(devGrob(x, dev), NULL, dev)
@@ -1089,12 +1176,42 @@ primToDev.circle <- function(x, dev) {
   }
 
   # Ending the group
-  devEndGroup(x$name, dev)
+  devEndGroup(x$name, FALSE, dev)
 }
 
-# Quick fix for now
-# Add device method eventually?
-# Could get tricky to do all symbol types here ... (?)
+adjustSymbolSize <- function(pointSize, pgp) {
+    # Points are affected by cex and fontsize but only if they are
+    # char or lines, etc
+    # Solution: push a viewport with new gps from the grob and can
+    # therefore can convert unit safely to inches because grid's unit
+    # conversion routines can handle when the *viewport* has the cex or
+    # fontsize information but not when the *grob* has it.
+    # Also, not recording on the DL because this viewport wasn't part
+    # of the original vp tree.
+    if (! is.null(pgp$cex) || ! is.null(pgp$fontsize)) {
+        xscale <- current.viewport()$xscale
+        yscale <- current.viewport()$yscale
+        if (! (is.null(pgp$cex) & is.null(pgp$fontsize))) {
+            pushViewport(viewport(xscale = xscale, yscale = yscale,
+                                  gp = gpar(cex = pgp$cex,
+                                      fontsize = pgp$fontsize)),
+                         recording = FALSE)
+        } else if (! is.null(pgp$cex)) {
+            pushViewport(viewport(xscale = xscale, yscale = yscale,
+                                  gp = gpar(cex = pgp$cex)),
+                         recording = FALSE)
+        } else {
+            # if (! is.null(pgp$fontsize))
+            pushViewport(viewport(xscale = xscale, yscale = yscale,
+                                  gp = gpar(fontsize = pgp$fontsize)),
+                         recording = FALSE)
+        }
+        pointSize <- convertWidth(pointSize, "inches") # Use width, matches grid
+        popViewport(recording = FALSE)
+    }
+    pointSize
+}
+
 primToDev.points <- function(x, dev) {
     # Finding out how many grobs we're going to be dealing with
     # length of x and y already checked in grid.points
@@ -1102,6 +1219,8 @@ primToDev.points <- function(x, dev) {
 
     # Expand the gp such that it fully defines all sub-grobs
     gp <- expandGpar(x$gp, n)
+
+    x$name <- getID(x$name, "grob")
 
     # Grouping each sub-grob
     devStartGroup(devGrob(x, dev), NULL, dev) 
@@ -1130,34 +1249,24 @@ primToDev.points <- function(x, dev) {
     for (i in 1:n) {
         # Check whether the point symbol has been used yet
         pchUsageTable <- get("pchUsageTable", envir = .gridSVGEnv)
-        createDef <- ! pchUsageTable[pchs[i] + 1, "used"]
         # Update usages
         pchUsageTable[pchs[i] + 1, "used"] <- TRUE
         assign("pchUsageTable", pchUsageTable, envir = .gridSVGEnv)
 
         pgp <- gp[i]
 
-        # Need to calculate the size of a char, which is affected by
-        # cex and fontsize
-        # A textGrob with an "M" will be a good approximation for the
-        # point size when size is a "char"
-        if (attr(sizes[i], "unit") == "char") {
-            pointSize <- convertHeight(grobHeight(textGrob("M", gp = pgp)),
-                                       "inches", valueOnly = TRUE) * as.numeric(sizes[i])
-            pointSize <- unit(pointSize, "inches")
-        } else
+        if (! is.unit(sizes[i]) && is.numeric(sizes[i])) {
+            # Just a number -- convert to a unit
+            pointSize <- unit(sizes[i], x$default.units)
+        } else {
+            # All other units
             pointSize <- sizes[i]
+        }
         
         asciipch <- if (pchs[i] %in% 32:127)
                         rawToChar(as.raw(pchs[i]))
                     else
                         pchs[i]
-
-        if (createDef) {
-            devStartSymbol(pchs[i], dev)
-            devPoint(asciipch, dev)
-            devEndSymbol(dev)
-        }
 
         # Force a stroke-width
         pgp$lwd <- if (is.null(pgp$lwd)) get.gpar()$lwd
@@ -1178,13 +1287,13 @@ primToDev.points <- function(x, dev) {
             }
         }
 
-        # Need to force size to be fontsize for character pch
-        if (pchs[i] >= 32) {
-            psize <- if (is.null(pgp$fontsize)) get.gpar()$fontsize
-                     else pgp$fontsize 
-            pointSize <- unit(psize, "points")
-        }
+        # Size is now relative to text so use text grob
+        if (pchs[i] >= 32)
+            pointSize <- grobWidth(textGrob(asciipch))
 
+        # Enforce gp$cex or gp$fontsize
+        pointSize <- adjustSymbolSize(pointSize, pgp)
+        
         devUseSymbol(devGrob(pointsGrob(x$x[i], x$y[i],
                                         pch = asciipch,
                                         size = pointSize,
@@ -1194,101 +1303,41 @@ primToDev.points <- function(x, dev) {
     }
 
     # Ending the group
-    devEndGroup(x$name, dev) 
-}
-  
-primToDev.xaxis <- function(x, dev) {
-    devStartGroup(devGrob(x, dev), gparToDevPars(x$gp), dev)
-  # If the at is NULL then the axis will have no
-  # children;  need to be calculated on-the-fly
-  if (is.null(x$at)) {
-    at <- grid.pretty(current.viewport()$xscale)
-    major <- grid:::make.xaxis.major(at, x$main) 
-    major$name <- paste(x$name, major$name, sep = ".")
-    ticks <- grid:::make.xaxis.ticks(at, x$main)
-    ticks$name <- paste(x$name, ticks$name, sep = ".")
-    grobToDev(major, dev)
-    grobToDev(ticks, dev)
-    if (x$label) {
-      label <- grid:::make.xaxis.labels(at, x$label, x$main)
-      label$name <- paste(x$name, label$name, sep = ".")
-      grobToDev(label, dev)
-    }
-  } 
-    devEndGroup(x$name, dev)
-}
-
-primToDev.yaxis <- function(x, dev) {
-    devStartGroup(devGrob(x, dev), gparToDevPars(x$gp), dev)
-  # If the at is NULL then the axis will have no
-  # children;  need to be calculated on-the-fly
-  if (is.null(x$at)) {
-    at <- grid.pretty(current.viewport()$yscale)
-    major <- grid:::make.yaxis.major(at, x$main) 
-    major$name <- paste(x$name, major$name, sep = ".")
-    ticks <- grid:::make.yaxis.ticks(at, x$main)
-    ticks$name <- paste(x$name, ticks$name, sep = ".")
-    grobToDev(major, dev)
-    grobToDev(ticks, dev)
-    if (x$label) {
-      label <- grid:::make.yaxis.labels(at, x$label, x$main)
-      label$name <- paste(x$name, label$name, sep = ".")
-      grobToDev(label, dev)
-    }
-  } 
-    devEndGroup(x$name, dev)
-}
-
-grobToDev.frame <- function(x, dev) {
-    depth <- enforceVP(x$vp, dev)
-
-    if (!is.null(x$framevp)) {
-        frameDepth <- enforceVP(x$framevp, dev)
-    } 
-    
-    devStartGroup(devGrob(x, dev), gparToDevPars(x$gp), dev)
-    lapply(x$children, grobToDev, dev)
-    devEndGroup(x$name, dev)
-    
-    if (!is.null(x$framevp)) {
-        unwindVP(x$framevp, frameDepth, dev)
-    }
-    
-    unwindVP(x$vp, depth, dev)
-}
-
-grobToDev.cellGrob <- function(x, dev) {
-    depth <- enforceVP(x$vp, dev)
-
-    if (!is.null(x$cellvp)) {
-        cellDepth <- enforceVP(x$cellvp, dev)
-    }
-
-    devStartGroup(devGrob(x, dev), gparToDevPars(x$gp), dev)
-    lapply(x$children, grobToDev, dev)
-    devEndGroup(x$name, dev)
-  
-    if (!is.null(x$cellvp)) {
-        unwindVP(x$cellvp, cellDepth, dev)
-    }
-
-    unwindVP(x$vp, depth, dev)
+    devEndGroup(x$name, FALSE, dev)
 }
 
 grobToDev.gTree <- function(x, dev) {
   depth <- enforceVP(x$vp, dev)
   if (!is.null(x$childrenvp)) {
-    pushViewport(x$childrenvp)
-    upViewport(grid:::depth(x$childrenvp))
+    pushViewport(x$childrenvp, recording=FALSE)
+    upViewport(grid:::depth(x$childrenvp), recording=FALSE)
   }
   primToDev(x, dev)
   unwindVP(x$vp, depth, dev)
+  # Ignore wrapping gTree as it was not on the original DL
+  if (x$name != "gridSVG")
+    progressStep("grob")
 }
 
 primToDev.gTree <- function(x, dev) {
+    if (x$name != "gridSVG") {
+        x$name <- getID(x$name, "grob")
+        x$classes <- class(x)
+        children <- x$children[x$childrenOrder]
+    } else {
+        children <- x$children
+    }
     devStartGroup(devGrob(x, dev), gparToDevPars(x$gp), dev)
-    lapply(x$children, grobToDev, dev)
-    devEndGroup(x$name, dev)
+    lapply(children, function(child) {
+        # 'gridSVG' is a special case because it is just a wrapping gTree.
+        # It is not useful for us to track the entire gPath as a result,
+        # only the path *after* 'gridSVG'
+        if (get("use.gPaths", envir = .gridSVGEnv) && x$name != "gridSVG")
+            child$name <- paste(x$name, child$name, sep = getSVGoption("gPath.sep"))
+        child$classes <- class(child)
+        grobToDev(child, dev)
+    })
+    devEndGroup(x$name, FALSE, dev)
 }
 
 # Viewports (and vpPaths and downs and ups)
