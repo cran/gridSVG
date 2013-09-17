@@ -234,7 +234,7 @@ drawDef.patternFillDef <- function(def, dev) {
                              width = def$dev.width, height = def$dev.height)
         pushViewport(viewport(name = getID(prefix, "vp")))
         grid.draw(gTree(name = getID(prefix, "grob"),
-                  children = gList(grid:::force(def$grob)),
+                  children = gList(grid.force(def$grob)),
                   gp = get.gpar())) # Force gp to ensure correct styling
         grid.force(redraw = FALSE)
         gt <- grid.grab(name = "gridSVG", wrap = TRUE)

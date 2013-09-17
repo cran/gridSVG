@@ -158,8 +158,8 @@ flatten.filter <- function(x, coords = TRUE) {
     } else {
         # location and width are relative to the object bounding box
         # (i.e., NOT grid units)
-        hjust <- grid:::resolveHJust(x$just, x$hjust)
-        vjust <- grid:::resolveVJust(x$just, x$vjust)
+        hjust <- resolveHJust(x$just, x$hjust)
+        vjust <- resolveVJust(x$just, x$vjust)
         x$x <- x$x - hjust*x$width
         x$y <- x$y - vjust*x$height
     }

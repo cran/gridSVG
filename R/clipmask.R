@@ -143,7 +143,7 @@ registerClipPath <- function(label, clippath) {
     #       at the time of registration
     defList <- list(label = label,
                     id = getID(label, "ref"),
-                    grob = grid:::force(clippath$grob),
+                    grob = grid.force(clippath$grob),
                     vp = getAbsoluteVp())
     class(defList) <- "clipPathDef"
     refDefinitions[[label]] <- defList
@@ -183,7 +183,7 @@ drawDef.clipPathDef <- function(x, dev) {
     # Start clipPath
     devStartClipPath(list(name = x$id), NULL, dev)
     # Draw grob
-    grobToDev(grid:::force(grob), dev)
+    grobToDev(grid.force(grob), dev)
     # Close clipPath, open group
     devEndClipPath(list(name = x$id), NULL, dev)
 }
@@ -395,7 +395,7 @@ registerMask <- function(label, mask = NULL, ...) {
                     y = y,
                     width = width,
                     height = height,
-                    grob = grid:::force(mask$grob),
+                    grob = grid.force(mask$grob),
                     vp = getAbsoluteVp())
     class(defList) <- "maskDef"
 
@@ -443,7 +443,7 @@ drawDef.maskDef <- function(x, dev) {
     # Start mask
     devStartMask(devGrob(x, dev), NULL, dev)
     # Draw grob
-    grobToDev(grid:::force(grob), dev)
+    grobToDev(grid.force(grob), dev)
     # Close mask
     devEndMask(devGrob(x, dev), NULL, dev)
 }

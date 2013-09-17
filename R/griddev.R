@@ -3,12 +3,6 @@ vpError <- function() {
   stop("vp should only be path")
 }
 
-# Wrapper for accessing cumulative rotation from current viewport
-# (Ideally this should be in 'grid')
-current.angle <- function() {
-    grid:::grid.Call("L_currentViewport")$rotation
-}
-
 # Functions to take a grid grob and call appropriate
 # functions from dev.R to produce output on a device
 
@@ -139,8 +133,8 @@ dToInches <- function(d, dev) {
 # Generate (left, bottom) from (x, y), (width, height), and justification
 leftbottom <- function(x, y, width, height,
                        just, hjust, vjust, dev) {
-    hjust <- grid:::resolveHJust(just, hjust)
-    vjust <- grid:::resolveVJust(just, vjust)
+    hjust <- resolveHJust(just, hjust)
+    vjust <- resolveVJust(just, vjust)
     left <- unit(convertX(x, "inches", valueOnly=TRUE) -
                  convertWidth(hjust*width, "inches", valueOnly=TRUE),
                  "inches")
@@ -213,8 +207,13 @@ changedGPar <- function(startGP, endGP) {
 # the appropriate number of parent viewports as well as the current viewport
 # AND then do the corresponding number of end groups afterwards
 startGroup <- function(vp, depth, dev) {
-    if (depth > 1)
-        startGroup(vp$parent, depth - 1, dev)
+    if (depth > 1) {
+        for (i in depth:2) {
+            parent <- current.parent(i - 1)
+            parent$classes <- class(parent)
+            devStartGroup(devGrob(parent, dev), gparToDevPars(parent$gp), dev)
+        }
+    }
     vp$classes <- class(vp)
     devStartGroup(devGrob(vp, dev), gparToDevPars(vp$gp), dev)
 }
@@ -223,11 +222,11 @@ enforceVP <- function(vp, dev) {
     if (!is.null(vp)) {
         if (!inherits(vp, "vpPath")) {
             pushViewport(vp, recording=FALSE)
-            depth <- grid:::depth(vp)
+            depth <- depth(vp)
         } else {
             depth <- downViewport(vp, recording=FALSE)
         }
-        startGroup(grid:::grid.Call("L_currentViewport"), depth, dev)
+        startGroup(current.viewport(), depth, dev)
     }
     depth
 }
@@ -341,7 +340,7 @@ devGrob.points <- function(x, dev) {
        x = cx(loc$x, dev),
        y = cy(loc$y, dev),
        size = cd(dToInches(x$size), dev),
-       angle = current.angle(),
+       angle = current.rotation(),
        classes = x$classes,
        pch = x$pch)
 }
@@ -395,7 +394,7 @@ devGrob.rastergrob <- function(x, dev) {
        y=cy(lb$y, dev),
        width=cw(dim$w, dev),
        height=ch(dim$h, dev),
-       angle=current.angle(),
+       angle=current.rotation(),
        datauri=x$datauri,
        classes=x$classes,
        name=x$name)
@@ -408,7 +407,7 @@ devGrob.rect <- function(x, dev) {
        y=cy(lb$y, dev),
        width=cw(dim$w, dev),
        height=ch(dim$h, dev),
-       angle=current.angle(),
+       angle=current.rotation(),
        classes=x$classes,
        name=x$name)
 }
@@ -469,7 +468,7 @@ devGrob.text <- function(x, dev) {
        rot=x$rot,
        width=width,
        height=height,
-       angle=current.angle(),
+       angle=current.rotation(),
        ascent=ascent,
        descent=descent,
        lineheight=textLineHeight,
@@ -554,7 +553,7 @@ getCoordsInfo <- function(vp, tm, dev) {
                  y = round(cy(unit(loc[2], "inches"), dev), 2),
                  width = round(cw(unit(1, "npc"), dev), 2),
                  height = round(ch(unit(1, "npc"), dev), 2),
-                 angle = current.angle(),
+                 angle = current.rotation(),
                  xscale = vp$xscale,
                  yscale = vp$yscale,
                  inch = round(cw(unit(1, "inches"), dev), 2))
@@ -566,7 +565,7 @@ devGrob.viewport <- function(x, dev) {
   # Modify the path so that we can use a different separator
   if (get("use.vpPaths", envir = .gridSVGEnv)) {
     vpname <- as.character(current.vpPath())
-    splitPath <- strsplit(vpname, grid:::.grid.pathSep)[[1]]
+    splitPath <- explode(vpname)
     vpname <- paste(splitPath, collapse = getSVGoption("vpPath.sep"))
   } else {
     vpname <- vp$name
@@ -593,7 +592,7 @@ devGrob.viewport <- function(x, dev) {
            vpy=coords$y,
            vpw=coords$width,
            vph=coords$height,
-           angle=current.angle(),
+           angle=current.rotation(),
            name=getID(vpname, "vp"),
            clip=clip,
            classes=x$classes,
@@ -991,8 +990,10 @@ primToDev.rastergrob <- function(x, dev) {
 
   # If we haven't been given any information about the h or w,
   # blow the image up to the full size but respect the aspect ratio
-  x <- grid:::resolveRasterSize(x)
-
+  x <- resolveRasterSize(x)
+  
+  # Use widthDetails() here (rather than grobWidth())
+  # because drawing context already enforced
   widths <- rep(x$width, length.out = n)
   heights <- rep(x$height, length.out = n) 
   
@@ -1307,16 +1308,16 @@ primToDev.points <- function(x, dev) {
 }
 
 grobToDev.gTree <- function(x, dev) {
-  depth <- enforceVP(x$vp, dev)
-  if (!is.null(x$childrenvp)) {
-    pushViewport(x$childrenvp, recording=FALSE)
-    upViewport(grid:::depth(x$childrenvp), recording=FALSE)
-  }
-  primToDev(x, dev)
-  unwindVP(x$vp, depth, dev)
-  # Ignore wrapping gTree as it was not on the original DL
-  if (x$name != "gridSVG")
-    progressStep("grob")
+    depth <- enforceVP(x$vp, dev)
+    if (!is.null(x$childrenvp)) {
+        pushViewport(x$childrenvp, recording=FALSE)
+        upViewport(depth(x$childrenvp), recording=FALSE)
+    }
+    primToDev(x, dev)
+    unwindVP(x$vp, depth, dev)
+    # Ignore wrapping gTree as it was not on the original DL
+    if (x$name != "gridSVG")
+        progressStep("grob")
 }
 
 primToDev.gTree <- function(x, dev) {

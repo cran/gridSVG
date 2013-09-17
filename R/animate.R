@@ -232,10 +232,12 @@ animateGrob <- function(grob, ...,
   
 grid.animate <- function(path, ..., group=FALSE, redraw = FALSE,
                          strict=FALSE, grep=FALSE, global=FALSE) {
-    grobApply(path, function(path) {
-        grid.set(path, animateGrob(grid.get(path), ..., group=group),
-                 redraw = redraw)
-    }, strict = strict, grep = grep, global = global)
+    grobApply(path,
+              function(path) {
+                  grid.set(path, animateGrob(grid.get(path), ...,
+                                             group=group),
+                           redraw = redraw)
+              }, strict = strict, grep = grep, global = global)
     invisible()
 }
 
@@ -363,7 +365,7 @@ applyAnimation.rect <- function(x, animSet, animation, group, dev) {
   rep <- rep(animSet$rep, length.out = n)
   rev <- rep(animSet$revert, length.out = n)
 
-  angle <- current.angle()
+  angle <- current.rotation()
   
   for (i in 1:n) {
     subName <- subGrobName(x$name, i)
@@ -614,7 +616,7 @@ applyAnimation.points <- function(x, animSet, animation, group, dev) {
       # Enforce gp$cex or gp$fontsize
       pointsize <- adjustSymbolSize(pointsize, x$gp)
       
-      angle <- current.angle()
+      angle <- current.rotation()
       
       switch(animation,
              x={
@@ -754,7 +756,7 @@ applyAnimation.text <- function(x, animSet, animation, group, dev) {
     rep <- rep(animSet$rep, length.out = n)
     rev <- rep(animSet$revert, length.out = n)
 
-    angle <- current.angle()
+    angle <- current.rotation()
     
     for (i in 1:n) {
         subName <- subGrobName(x$name, i)
@@ -1195,7 +1197,8 @@ applyAnimation.rastergrob <- function(x, animSet, animation, group, dev) {
     } else {
 
         # Raster may have NULL width or height
-        x <- grid:::resolveRasterSize(x)
+        x$width <- widthDetails(x)
+        x$height <- heightDetails(x)
 
         # We may be dealing with multiple rasters that need animating
         n <- max(length(x$x), length(x$y), length(x$width), length(x$height))
@@ -1214,7 +1217,7 @@ applyAnimation.rastergrob <- function(x, animSet, animation, group, dev) {
         rep <- rep(animSet$rep, length.out = n)
         rev <- rep(animSet$revert, length.out = n)
 
-        angle <- current.angle()
+        angle <- current.rotation()
         
         for (i in 1:n) {
             subName <- subGrobName(x$name, i)

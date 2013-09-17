@@ -2,6 +2,18 @@
 \title{NEWS file for the gridSVG package}
 \encoding{UTF-8}
 
+\section{Changes in version 1.4-0}{
+  \itemize{
+    \item Bumped R version requirement to R >= 3.1.0 because this
+    version of gridSVG depends on some new exports from 'grid'
+
+    \item Removed all nasty peeks into grid namespace (hence
+    dependence on R 3.1.0).
+
+    \item Tweaks to tests/ to make it easier to do QC checks.
+  }
+}
+
 \section{Changes in version 1.3-0}{
   \itemize{
     \item Added support for rotated viewports
