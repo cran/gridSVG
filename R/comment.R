@@ -13,3 +13,4 @@ commentGrob <- function(comment, name = NULL, vp = NULL) {
 primToDev.comment.grob <- function(x, dev) {
     svgComment(x$comment, dev@dev)
 }
+

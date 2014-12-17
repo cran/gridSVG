@@ -45,3 +45,9 @@ grid.garnish("c",
              onmousedown="alert('click me!')")
 grid.export("testmultattr.svg")
              
+# Sneak an SVG attribute through via gpar()
+grid.newpage()
+grid.text("test",
+          gp=gpar("text-decoration"="line-through"),
+          name="tt")
+grid.export("testsvgattr.svg")

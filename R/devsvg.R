@@ -19,6 +19,11 @@
 # Utility functions
 #################
 
+# Any non-grid parameters is let through untouched
+# BUT code later in svg.R will complain about things that are
+# not SVG parameters
+# NOTE that 'cex'/'lex' have been incorporated into 'fontsize'/'lwd'
+# and removed by this point
 devParNameToSVGStyleName <- function(name) {
   switch(name,
          col="stroke",
@@ -35,7 +40,7 @@ devParNameToSVGStyleName <- function(name) {
          lineend="stroke-linecap",
          linejoin="stroke-linejoin",
          linemitre="stroke-miterlimit",
-         NA)
+         name)
 }
 
 # R lwd is in points, pixels or 1/96 inches
@@ -268,6 +273,7 @@ devParToSVGStyle <- function(gp, dev) {
                 gp$fontsize <- (gp$fontsize * gp$cex)
             else
                 gp$fontsize <- (get.gpar("fontsize")[[1]] * gp$cex)
+            gp$cex <- NULL
         }
         # Do the same for "lex"
         if ("lex" %in% names(gp)) {
@@ -275,7 +281,12 @@ devParToSVGStyle <- function(gp, dev) {
                 gp$lwd <- (gp$lwd * gp$lex)
             else
                 gp$lwd <- (get.gpar("lwd")[[1]] * gp$lex)
+            gp$lex <- NULL
         }
+        # Just remove "lineheight" (this has already been incorporated
+        # into text object information by this point)
+        # Remove it so that it is not exported as SVG attribute
+        gp$lineheight <- NULL
         # Scale lty by lwd
         if ("lty" %in% names(gp)) {
             if ("lwd" %in% names(gp)) {
@@ -437,7 +448,8 @@ setMethod("devTextNode", signature(device="svgDevice"),
 setMethod("devStartClip", signature(device="svgDevice"),
           function(clip, gp, device) {
             svgClipPath(clip$name, clip$x, clip$y,
-                        clip$width, clip$height, device@dev)
+                        clip$width, clip$height, clip$angle,
+                        device@dev)
 
             # Because of the fact that we never stop clipping until
             # we pop our current viewport, we need to store information

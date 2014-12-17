@@ -229,7 +229,8 @@ drawDef.filterDef <- function(def, dev) {
     for (i in 1:length(children)) {
         oldclass <- class(children[[i]])
         child <- cleanAttrs(children[[i]], c("just", "hjust", "vjust"))
-        child <- compileUnits(child, dev)
+        child <- compileUnits(child, def$primitiveUnits == "userSpaceOnUse",
+                              dev)
         class(child) <- oldclass
         filterSVG(child, dev)
     }
@@ -251,11 +252,15 @@ cleanAttrs <- function(x, attrs = "") {
 # All filter effects have these in common,
 # compile the units to px to allow us to have more specific
 # methods later
-compileUnits <- function(x, dev) {
-    x$x <- cx(x$x, dev)
-    x$y <- cy(x$y, dev)
-    x$width <- cw(x$width, dev)
-    x$height <- ch(x$height, dev)
+compileUnits <- function(x, coords, dev) {
+    # Only resolve child x/y/w/h to px if UserSpaceOnUse
+    # (otherwise, x/y/w/h are already just [bbox] values)
+    if (coords) {
+        x$x <- cx(x$x, dev)
+        x$y <- cy(x$y, dev)
+        x$width <- cw(x$width, dev)
+        x$height <- ch(x$height, dev)
+    }
     x
 }
 
@@ -727,7 +732,7 @@ feFlood <- function(col = "black", ...) {
 filterSVG.fe.gaussian.blur <- function(x, dev) {
     svgdev <- dev@dev
     if (length(x$stdDeviation) > 1)
-        x$sd <- paste0(round(x$stdDeviation, 2), collapse = " ")
+        x$stdDeviation <- paste0(round(x$stdDeviation, 2), collapse = " ")
     x <- cleanAttrs(x, "coords")
     newXMLNode("feGaussianBlur",
                attrs = roundAttribs(x),
@@ -979,3 +984,14 @@ feTurbulence <- function(baseFrequency = 0, numOctaves = 1, seed = 1,
     x
 }
 
+# Ensure the filters are retained on a forced grob
+forceGrob.filtered.grob <- function(x) {
+    y <- NextMethod()
+    if (inherits(y, "forcedgrob")) {
+        y$referenceLabel <- x$referenceLabel
+        y$filterLabel <- x$filterLabel
+        y$filterGroup <- x$filterGroup
+        class(y) <- unique(c("filtered.grob", class(y)))
+    }
+    y
+}

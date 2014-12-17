@@ -155,6 +155,12 @@ export("linearGradient",
        "grid.gradientFill",
        "gradientFillGrob")
 S3method("print", "gradient")
+S3method("forceGrob", "gradientFilled.grob")
+S3method("forceGrob", "animated.grob")
+S3method("forceGrob", "linked.grob")
+S3method("forceGrob", "filtered.grob")
+S3method("forceGrob", "patternFilled.grob")
+S3method("forceGrob", "garnished.grob")
 
 # Patterns
 export("pattern",

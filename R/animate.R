@@ -1521,3 +1521,14 @@ primToDev.animated.grob <- function(x, dev) {
     animate(x, dev)
     NextMethod()    
 }
+
+# Ensure the animation is retained on a forced grob
+forceGrob.animated.grob <- function(x) {
+    y <- NextMethod()
+    if (inherits(y, "forcedgrob")) {
+        y$animationSets <- x$animationSets
+        y$groupAnimationSets <- x$groupAnimationSets
+        class(y) <- unique(c("animated.grob", class(y)))
+    }
+    y
+}

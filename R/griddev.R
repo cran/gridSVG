@@ -208,10 +208,13 @@ changedGPar <- function(startGP, endGP) {
 # AND then do the corresponding number of end groups afterwards
 startGroup <- function(vp, depth, dev) {
     if (depth > 1) {
-        for (i in depth:2) {
-            parent <- current.parent(i - 1)
+        path <- upViewport(depth - 1, recording=FALSE)
+        paths <- explode(path)
+        for (i in paths) {
+            parent <- current.viewport()
             parent$classes <- class(parent)
             devStartGroup(devGrob(parent, dev), gparToDevPars(parent$gp), dev)
+            downViewport(i, recording=FALSE)
         }
     }
     vp$classes <- class(vp)
@@ -638,6 +641,7 @@ devGrob.clip <- function(x, dev) {
        y=cy(lb$y, dev),
        width=cw(dim$w, dev),
        height=ch(dim$h, dev),
+       angle=current.rotation(),
        classes=x$classes,
        name=getID(x$name, "grob"))
 }
@@ -1002,7 +1006,9 @@ primToDev.rastergrob <- function(x, dev) {
 
   # Because of issues regarding interpolation, it's best just to
   # store the raster with as large a dimension as possible.
-  rasterDims <- c(ch(max(heights), dev), cw(max(widths), dev))
+  # OTOH, never want to REDUCE the size of the raw raster (?)
+  rasterDims <- c(max(abs(rasterHeight), ch(max(heights), dev)),
+                  max(abs(rasterWidth), cw(max(widths), dev)))
 
   olddev <- dev.cur()
   png(filename = fileloc, width = round(abs(rasterDims[2])),

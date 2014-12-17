@@ -290,3 +290,15 @@ drawDef.patternFillRefDef <- function(def, dev) {
         parent = svgDevParent(svgdev))
 }
 
+# Ensure the patterns are retained on a forced grob
+forceGrob.patternFilled.grob <- function(x) {
+    y <- NextMethod()
+    if (inherits(y, "forcedgrob")) {
+        y$referenceLabel <- x$referenceLabel
+        y$patternFillLabel <- x$patternFillLabel
+        y$patternFillAlpha <- x$patternFillAlpha
+        y$patternFillGroup <- x$patternFillGroup
+        class(y) <- unique(c("patternFilled.grob", class(y)))
+    }
+    y
+}

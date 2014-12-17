@@ -52,6 +52,7 @@ bufprefix(const struct buf *buf, const char *prefix)
 int
 bufgrow(struct buf *buf, size_t neosz)
 {
+        int i;
 	size_t neoasz;
 	void *neodata;
 
@@ -73,6 +74,12 @@ bufgrow(struct buf *buf, size_t neosz)
 
 	buf->data = neodata;
 	buf->asize = neoasz;
+
+        /* Initialise the new memory */
+	for (i = buf->size; i < buf->asize; ++i) {
+                buf->data[i] = 0;
+	}
+
 	return BUF_OK;
 }
 

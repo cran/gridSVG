@@ -191,6 +191,10 @@ flattenLinearGradient <- function(gradient) {
     # Flatten all locations here
     if (gradient$gradientUnits == "userSpaceOnUse") {
         offsets <- getAbsoluteOffset()
+        width <- convertWidth(gradient$x2 - gradient$x1, "inches",
+                              valueOnly = TRUE)
+        height <- convertHeight(gradient$y2 - gradient$y1, "inches",
+                                valueOnly = TRUE)
         gradient$x1 <- convertX(gradient$x1, "inches") + offsets[1]
         gradient$x2 <- convertX(gradient$x2, "inches") + offsets[1]
         gradient$y1 <- convertY(gradient$y1, "inches") + offsets[2]
@@ -328,3 +332,15 @@ drawDef.gradientDef <- function(def, dev) {
     svgDevChangeParent(xmlParent(svgDevParent(svgdev)), svgdev)
 }
 
+# Ensure the gradient fill is retained on a forced grob
+forceGrob.gradientFilled.grob <- function(x) {
+    y <- NextMethod()
+    if (inherits(y, "forcedgrob")) {
+        y$referenceLabel <- x$referenceLabel
+        y$gradientFillLabel <- x$gradientFillLabel
+        y$gradientFillAlpha <- x$gradientFillAlpha
+        y$gradientFillGroup <- x$gradientFillGroup
+        class(y) <- unique(c("gradientFilled.grob", class(y)))
+    }
+    y
+}

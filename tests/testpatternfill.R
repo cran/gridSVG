@@ -32,3 +32,16 @@ grid.circle(name = "filledcircle")
 grid.patternFill("filledcircle", label = "bigcross", alpha = 0.5)
 grid.export("pattern-test-ref.svg")
 dev.off()
+
+# Test pattern offset
+pdf(file = NULL)
+grid.newpage()
+grid.rect(y=1, height=.5, just="top", name="zero-offset")
+grid.patternFill("zero-offset", label="cross")
+offsetPattern <- pattern(crossGrob, x=unit(1, "cm"),
+                         dev.width=1, dev.height=1)
+grid.rect(y=0, height=.5, just="bottom", name="non-zero-offset")
+grid.patternFill("non-zero-offset", offsetPattern)
+grid.export("pattern-test-offset.svg")
+dev.off()
+

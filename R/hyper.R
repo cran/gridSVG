@@ -108,3 +108,15 @@ primToDev.linked.grob <- function(x, dev) {
 #   NextMethod()
 #   svgEndLink(dev@dev)
 # }
+
+# Ensure the hyperlink is retained on a forced grob
+forceGrob.linked.grob <- function(x) {
+    y <- NextMethod()
+    if (inherits(y, "forcedgrob")) {
+        y$links <- x$links
+        y$groupLinks <- x$groupLinks
+        y$show <- x$show
+        class(y) <- unique(c("linked.grob", class(y)))
+    }
+    y
+}

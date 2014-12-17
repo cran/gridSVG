@@ -110,3 +110,14 @@ grobApply <- function(path, FUN, ...,
         }
     } 
 }
+
+# Ensure the attributes are retained on a forced grob
+forceGrob.garnished.grob <- function(x) {
+    y <- NextMethod()
+    if (inherits(y, "forcedgrob")) {
+        y$attributes <- x$attributes
+        y$groupAttributes <- x$groupAttributes
+        class(y) <- unique(c("garnished.grob", class(y)))
+    }
+    y
+}

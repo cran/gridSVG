@@ -2,6 +2,32 @@
 \title{NEWS file for the gridSVG package}
 \encoding{UTF-8}
 
+\section{Changes in version 1.4-2}{
+  \itemize{
+    \item Fixed export of clip grob (reported by Matthew Plourde).
+    
+    \item Fixed support for primitiveUnits="bbox" in filterEffect().
+
+    \item Fix memory initialisation problem in base64 C code.
+
+    Reported in valgrind testing by Brian Ripley.
+  }
+}
+\section{Changes in version 1.4-1}{
+  \itemize{
+    \item Fixed raster export so that original raster is never
+    exported at a resolution LOWER than its native resolution.
+    
+    \item Added forceGrob() methods so that animations, garnishing,
+    hyperlinks, etc are retained if a grob is forced.
+    
+    \item Fix for export of downViewport(path) when the depth of the
+    resulting navigation is greater than depth(path).
+
+    The visible manifestation of this bug was that <g> elements were
+    generated with an incorrect (too long/wrong depth) 'id' attribute.
+  }
+}
 \section{Changes in version 1.4-0}{
   \itemize{
     \item Bumped R version requirement to R >= 3.1.0 because this
