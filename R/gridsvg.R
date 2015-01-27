@@ -253,24 +253,34 @@ gridsvg <- function(name = "Rplots.svg",
                     xmldecl = xmlDecl(),
                     ...) {
     # Avoid multiple gridSVG devices (because referenced content can
-    # have side effects across devices
+    # have side effects across devices)
     deviceNames <- unlist(.Devices)
     if ("gridsvg" %in% deviceNames)
         stop("Only one 'gridsvg' device may be used at a time")
-    callargs <- as.list(match.call(expand.dots = FALSE))[-1]
-    dev.args <- as.list(callargs$`...`) # pairlists...
-    if (is.null(dev.args))
-        dev.args <- list(file = NULL)
-    else
-        dev.args["file"] <- list(NULL)
+    fncall <- match.call(expand.dots = FALSE)
+    arglen <- length(fncall) - 1
+    argnames <- names(fncall)
+    gridsvg.args <- list()
+    dev.args <- list()
+    for (i in seq_len(arglen) + 1) {
+        argname <- argnames[[i]]
+        if (argname == "...")
+            dev.args <- eval(fncall[[i]])
+        else
+            gridsvg.args[[argname]] <- eval(fncall[[i]])
+    }
+    for (i in seq_along(dev.args))
+        dev.args[[i]] <- eval(dev.args[[i]])
+    fileind <- which(names(dev.args) == "file")
+    if (length(fileind))
+        dev.args[[fileind]] <- NULL
+    dev.args <- c(list(file = NULL), dev.args)
     do.call("pdf", dev.args)
-    devind <- which(names(callargs) == "...")
-    gridsvg.args <- if (length(devind)) callargs[-devind]
-                    else callargs
-    if (exists("gridSVGArgs", envir = .gridSVGEnv))
-        gridSVGArgs <- get("gridSVGArgs", envir = .gridSVGEnv)
-    else
-        gridSVGArgs <- list()
+    gridSVGArgs <-
+        if (exists("gridSVGArgs", envir = .gridSVGEnv))
+            get("gridSVGArgs", envir = .gridSVGEnv)
+        else
+            list()
     gridSVGArgs[[dev.cur()]] <- gridsvg.args
     assign("gridSVGArgs", gridSVGArgs, envir = .gridSVGEnv)
     # HACK!

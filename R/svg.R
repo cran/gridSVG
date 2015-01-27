@@ -1663,13 +1663,16 @@ svgStyleAttributes <- function(svgstyle) {
     if (emptyStyle(svgstyle)) {
         list()
     } else {
-        if (any(sapply(svgstyle, length) > 1))
-            stop("All SVG style attribute values must have length 1")
+        # Remove non-SVG style attributes (with warning)
         names <- names(svgstyle)
         svgnames <- names %in% get("SVGParList", envir=.gridSVGEnv)
-        if (any(!svgnames))
-            warning(paste("Non-SVG style attribute name(s):",
+        if (any(!svgnames)) {
+            warning(paste("Removing non-SVG style attribute name(s):",
                           paste(names[!svgnames], collapse=", ")))
+            svgstyle <- svgstyle[names[svgnames]]
+        }
+        if (any(sapply(svgstyle, length) > 1))
+            stop("All SVG style attribute values must have length 1")
         svgstyle
     }
 }

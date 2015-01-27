@@ -2,6 +2,20 @@
 \title{NEWS file for the gridSVG package}
 \encoding{UTF-8}
 
+\section{Changes in version 1.4-3}{
+  \itemize{
+    \item Non-SVG style attributes are now \emph{removed} (with a
+    warning) and this is done \emph{before} checking attributes for
+    length equal to 1.
+
+    This was in response to a problem reported by Wolfgang Huber.
+
+    \item Fix evaluation of arguments when using the 'gridsvg' device.
+    These were not being evaluated before being passed to 'grid.export'.
+
+    Also reported by Wolfgang Huber.
+  }
+}
 \section{Changes in version 1.4-2}{
   \itemize{
     \item Fixed export of clip grob (reported by Matthew Plourde).
