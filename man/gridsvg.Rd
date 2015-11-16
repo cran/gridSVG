@@ -23,6 +23,8 @@ gridsvg(name = "Rplots.svg",
         annotate = TRUE,
         progress = FALSE,
         compression = 0,
+        strict = TRUE,
+        rootAttrs = NULL,
         xmldecl = xmlDecl(), ...)
 dev.off(which = dev.cur())
 }
@@ -30,7 +32,7 @@ dev.off(which = dev.cur())
   \item{name, exportCoords, exportMappings, exportJS, res, prefix,
     addClasses, indent,
     htmlWrapper, usePaths, uniqueNames, annotate, progress,
-    compression, xmldecl}{
+    compression, strict, rootAttrs, xmldecl}{
     These parameters are passed onto \code{\link{grid.export}}.
   }
   \item{\dots}{

@@ -481,7 +481,8 @@ feColorMatrix <- function(input = NA,
     
     # Clamp values to valid bounds
     if (type == "matrix")
-        values <- matrix(pmax(0, pmin(1, values)), ncol = 5, nrow = 4)
+        # Need to transpose matrix so that it is written out in row-order
+        values <- t(matrix(pmax(0, pmin(1, values)), ncol = 5, nrow = 4))
     if (type == "saturate")
         values <- max(0, min(1, values))
     if (type == "hueRotate")
@@ -500,7 +501,7 @@ filterSVG.fe.component.transfer <- function(x, dev) {
     parentAttrs <- cleanAttrs(x, c("coords", "transfers"))
     children <- x$transfers
 
-    cm <- newXMLNode("feColorMatrix",
+    cm <- newXMLNode("feComponentTransfer",
                      attrs = roundAttribs(parentAttrs),
                      parent = svgDevParent(svgdev))
 
@@ -521,7 +522,7 @@ filterSVG.fe.component.transfer <- function(x, dev) {
 feComponentTransfer <- function(input = NA, transfers = NULL, ...) {
     if (is.null(transfers))
         transfers <- list()
-    x <- fe(children = transfers, ...)
+    x <- fe(transfers = transfers, ...)
     if (! is.na(input))
         x$`in` <- input
     class(x) <- c("fe.component.transfer", class(x))

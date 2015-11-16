@@ -20,6 +20,8 @@ grid.export(name = "Rplots.svg",
             annotate = TRUE,
             progress = FALSE,
             compression = 0,
+            strict = TRUE,
+            rootAttrs = NULL,
             xmldecl = xmlDecl())
 }
 \arguments{
@@ -125,6 +127,16 @@ grid.export(name = "Rplots.svg",
     compression applied to the SVG image when it is saved to a
     file. Higher values of \code{compression} indicate smaller file
     sizes at the expense of increased computation.
+  }
+  \item{strict}{
+    A logical indicating whether checks should be made that all
+    attributes added to SVG elements are valid.  If this is
+    \code{TRUE} and invalid attributes are detected, those
+    attributes are removed, with a warning.
+  }
+  \item{rootAttrs}{
+    A named character vector containing attributes for the top-level
+    \code{<svg>} element.
   }
   \item{xmldecl}{
     This parameter sets the XML declaraction that will be applied to the

@@ -13,7 +13,7 @@ library(gridSVG)
 grid.circle(.1, .5, r=.1, gp=gpar(fill="black"),
             name="circle")
 grid.animate("circle", x=c(.1, .9))
-gridToSVG("animCircle.svg")
+grid.export("animCircle.svg")
 
 
 ###################################################
@@ -103,7 +103,7 @@ polylineY <- animUnit(unit(c(.7, .5, .7, .3, .5, .3,
                       timeid=rep(1:3, each=6),
                       id=rep(rep(1:2, each=3), 3))
 grid.animate("polyline", y=polylineY, rep=TRUE)
-gridToSVG("animPolyline.svg")
+grid.export("animPolyline.svg")
 
 
 ###################################################

@@ -886,6 +886,10 @@ primToDev.xspline <- function(x, dev) {
     }
   }
 
+  # 'grid' does not allow NAs in (x, y) for Xsplines
+  if (any(is.na(x$x)) || any(is.na(x$y)))
+      stop("non-finite control point in Xspline")
+  
   # If we have only one spline
   if (is.null(x$id) && is.null(x$id.lengths)) {
       x$id <- rep(1L, length(x$x))

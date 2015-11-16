@@ -1,5 +1,11 @@
 
-import(methods, grid, RJSONIO, XML)
+importFrom("grDevices", "col2rgb", "dev.cur", "dev.flush", "dev.hold",
+           "dev.set", "devAskNewPage", "pdf", "png")
+importFrom("graphics", "par")
+importFrom("utils", "getS3method", "getTxtProgressBar", "head",
+           "localeToCharset", "packageDescription",
+           "setTxtProgressBar", "tail", "txtProgressBar")
+import("methods", "grid", "RJSONIO", "XML")
 
 export("svgOpen",
        "svgClose",

@@ -23,6 +23,8 @@ grid.export <- function(name = "Rplots.svg",
                         annotate = TRUE,
                         progress = FALSE,
                         compression = 0,
+                        strict = TRUE,
+                        rootAttrs = NULL,
                         xmldecl = xmlDecl()) {
     # 'XML' can sometimes give us namespace warnings, despite producing
     # valid SVG. Silence any warnings that 'XML' might give us.
@@ -99,7 +101,8 @@ grid.export <- function(name = "Rplots.svg",
         progressInit("grob", ngrobs)
     }
 
-    svgdev <- openSVGDev(name, width=par("din")[1], height=par("din")[2], res = res)
+    svgdev <- openSVGDev(name, width=par("din")[1], height=par("din")[2],
+                         res = res, strict = strict, rootAttrs = rootAttrs)
     # Create a gTree from the current page
     # NOTE that set the 'gp' slot on this top-level gTree
     # based on ROOT vp
@@ -250,6 +253,8 @@ gridsvg <- function(name = "Rplots.svg",
                     annotate = TRUE,
                     progress = FALSE,
                     compression = 0,
+                    strict = TRUE,
+                    rootAttrs = NULL,
                     xmldecl = xmlDecl(),
                     ...) {
     # Avoid multiple gridSVG devices (because referenced content can

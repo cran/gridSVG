@@ -34,7 +34,7 @@ library(gridSVG)
 grid.circle(.1, .5, r=.1, gp=gpar(fill="black"),
             name="circle")
 grid.animate("circle", x=c(.1, .9))
-gridToSVG("animCircle.svg")
+grid.export("animCircle.svg")
 @ 
 
 Things can get more complicated  though.  For example, in order to animate
@@ -179,7 +179,7 @@ grid.newpage()
 <<polylinesrc>>
 <<animvalue>>
 <<animpolylinesrc>>
-gridToSVG("animPolyline.svg")
+grid.export("animPolyline.svg")
 @ 
 
 \section*{The \code{as.animUnit()} function}

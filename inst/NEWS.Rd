@@ -2,6 +2,33 @@
 \title{NEWS file for the gridSVG package}
 \encoding{UTF-8}
 
+\section{Changes in version 1.5-0}{
+  \itemize{
+    \item Added \code{strict} argument for \code{grid.export()}
+    and \code{gridsvg()} to allow control over whether SVG attributes
+    are checked for validity.
+
+    \item Added \code{rootAttrs} argument for \code{grid.export()}
+    and \code{gridsvg()} to allow control over attributes of
+    top-level \code{<svg>} element.
+  }
+}
+\section{Changes in version 1.4-4}{
+  \itemize{
+    \item Fixed bug where \code{gpar(col=c(foo="red"))} would not work
+    (the name \code{foo} is now stripped).  Reported by Simon Anders.
+
+    \item Fixed bug in feColorMatrix().  The color matrix required
+    transposing before export to SVG.
+
+    \item Fixed bug in feComponentTransfer().  Was generating an
+    feColorMatrix element \emph{and} was inlining transfer functions
+    as attributes (rather than generating feFunc elements as children).
+
+    \item Added support for NA values in locations and dimensions
+    of graphical primitives.
+  }
+}
 \section{Changes in version 1.4-3}{
   \itemize{
     \item Non-SVG style attributes are now \emph{removed} (with a
