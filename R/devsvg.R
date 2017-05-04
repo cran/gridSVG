@@ -46,15 +46,34 @@ devParNameToSVGStyleName <- function(name) {
 # R lwd is in points, pixels or 1/96 inches
 # However, most (perhaps all?) devices use 1/96 for their
 # definition of an 'lwd', so use that.
-devLwdToSVG <- function(lwd, dev) {
-    round(lwd/96 * dev@res, 2)
+devLwdToSVG <- function(lwd, lty, dev) {
+    if (!is.null(lty) && lty == "blank") {
+        0
+    } else {
+        round(lwd/96 * dev@res, 2)
+    }
 }
 
 # An R lty has to become an SVG stroke-dasharray
 # This is going to be imperfect (to say the least)
 devLtyToSVG <- function(lty, lwd, dev) {
+    ## If necessary, convert numeric lty to char
+    if (is.numeric(lty)) {
+        if (lty == 0) {
+            lty <- "blank"
+        } else {
+            lty <- switch(lty,
+                          "solid",
+                          "dashed",
+                          "dotted",
+                          "dotdash",
+                          "longdash",
+                          "twodash")
+        }
+    }
     # Convert lty to numeric vec
     numlty <- switch(lty,
+                     blank=,
                      solid=0,
                      # These numbers taken from ?par
                      dashed=c(4, 4),
@@ -67,9 +86,7 @@ devLtyToSVG <- function(lty, lwd, dev) {
     # Scale by lwd
     scaledlty <- numlty * lwd
     # Convert to SVG stroke-dasharray string
-    paste(ifelse(scaledlty == 0,
-                 "none",
-                 round(scaledlty/96 * dev@res, 2)),
+    paste(ifelse(scaledlty == 0, "none", round(scaledlty, 2)),
           collapse=",")
 }
 
@@ -254,7 +271,6 @@ devParToSVGPar <- function(name, par, dev) {
                     fillAlpha=devColAlphaToSVG(par),
                     fontsize=devFontSizeToSVG(par, dev),
                     fontfamily=devFontFamilyToSVG(par, dev),
-                    lwd=devLwdToSVG(par, dev),
                     linejoin=devLineJoinToSVG(par, dev),
                     # By default just pass through the actual value
                     # e.g., lty has already been converted at this point
@@ -287,6 +303,14 @@ devParToSVGStyle <- function(gp, dev) {
         # into text object information by this point)
         # Remove it so that it is not exported as SVG attribute
         gp$lineheight <- NULL
+        # Scale lwd amd zero lwd if lty is "blank"
+        if ("lwd" %in% names(gp)) {
+            if ("lty" %in% names(gp)) {
+                gp$lwd <- devLwdToSVG(gp$lwd, gp$lty, dev)
+            } else {
+                gp$lwd <- devLwdToSVG(gp$lwd, NULL, dev)
+            }
+        }
         # Scale lty by lwd
         if ("lty" %in% names(gp)) {
             if ("lwd" %in% names(gp)) {

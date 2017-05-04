@@ -570,165 +570,178 @@ applyAnimation.points <- function(x, animSet, animation, group, dev) {
                    animSet$begin, animSet$interp, animSet$dur, animSet$rep, animSet$rev,
                    x$name, dev@dev)
     } else {
-  # We may be dealing with multiple points that need animating
-  n <- max(length(x$x), length(x$y), length(x$size))
+        ## We may be dealing with multiple points that need animating
+        n <- max(length(x$x), length(x$y), length(x$size))
 
-  # Rep the original x/y/width/height out to be the same length
-  x$x <- rep(x$x, length.out=n)
-  x$y <- rep(x$y, length.out=n)
-  x$pch <- rep(x$pch, length.out = n)
-  x$size <- rep(x$size, length.out = n)
+        ## Rep the original x/y/width/height out to be the same length
+        x$x <- rep(x$x, length.out=n)
+        x$y <- rep(x$y, length.out=n)
+        x$pch <- rep(x$pch, length.out = n)
+        x$size <- rep(x$size, length.out = n)
 
-  # Need to grab the lwd so that we can keep line thickness the same
-  # as we change the size of a point
-  sw <- if (! is.null(x$gp$lwd)) x$gp$lwd
-        else get.gpar()$lwd
-  sw <- rep(as.numeric(devLwdToSVG(sw, dev)), length.out = n)
+        ## Need to grab the lwd so that we can keep line thickness the same
+        ## as we change the size of a point
+        if (! is.null(x$gp$lwd))
+            sw <- x$gp$lwd
+        else
+            sw <- get.gpar()$lwd
+        if (! is.null(x$gp$lty))
+            lty <- x$gp$lty
+        else
+            lty <- get.gpar()$lty
+        
+        sw <- rep(as.numeric(devLwdToSVG(sw, lty, dev)), length.out = n)
 
-  # Repeating animation parameters so that each element can have
-  # distinct values
-  begin <- rep(animSet$begin, length.out = n)
-  interp <- rep(animSet$interp, length.out = n)
-  dur <- rep(animSet$duration, length.out = n)
-  rep <- rep(animSet$rep, length.out = n)
-  rev <- rep(animSet$revert, length.out = n)
+        ## Repeating animation parameters so that each element can have
+        ## distinct values
+        begin <- rep(animSet$begin, length.out = n)
+        interp <- rep(animSet$interp, length.out = n)
+        dur <- rep(animSet$duration, length.out = n)
+        rep <- rep(animSet$rep, length.out = n)
+        rev <- rep(animSet$revert, length.out = n)
 
-  # Because grobs can produce multiple elements, if animation is to
-  # occur on a grob it is assumed to occur on all elements, but
-  # elements may simply have their properties assigned to the same
-  # value multiple times.
-  for (i in 1:n) {
-      subName <- subGrobName(x$name, i)
+        ## Because grobs can produce multiple elements, if animation is to
+        ## occur on a grob it is assumed to occur on all elements, but
+        ## elements may simply have their properties assigned to the same
+        ## value multiple times.
+        for (i in 1:n) {
+            subName <- subGrobName(x$name, i)
+            
+            if ("x" %in% names(animSet$animations))
+                xi <- ithUnit(animSet$animations$x, x$x, i)
+            else
+                xi <- x$x[i]
+            if ("y" %in% names(animSet$animations))
+                yi <- ithUnit(animSet$animations$y, x$y, i)
+            else
+                yi <- x$y[i]
+            if ("size" %in% names(animSet$animations))
+                pointsize <- ithUnit(animSet$animations$size, x$size, i)
+            else
+                pointsize <- x$size[i]
+
+            ## Enforce gp$cex or gp$fontsize
+            pointsize <- adjustSymbolSize(pointsize, x$gp)
       
-      if ("x" %in% names(animSet$animations))
-          xi <- ithUnit(animSet$animations$x, x$x, i)
-      else
-          xi <- x$x[i]
-      if ("y" %in% names(animSet$animations))
-          yi <- ithUnit(animSet$animations$y, x$y, i)
-      else
-          yi <- x$y[i]
-      if ("size" %in% names(animSet$animations))
-          pointsize <- ithUnit(animSet$animations$size, x$size, i)
-      else
-          pointsize <- x$size[i]
-
-      # Enforce gp$cex or gp$fontsize
-      pointsize <- adjustSymbolSize(pointsize, x$gp)
-      
-      angle <- current.rotation()
-      
-      switch(animation,
-             x={
-                 loc <- locToInches(xi, yi, dev)
-                 svgAnimateXYWH("x", cx(loc$x, dev),
-                                begin[i], interp[i], dur[i],
-                                rep[i], rev[i],
-                                id=subName, svgdev=dev@dev)
-                 if (angle != 0) {
-                     if (!"y" %in% names(animSet$animations)) {
-                         svgAnimateXYWH("y", cy(loc$y, dev),
-                                        begin[i], interp[i], dur[i],
-                                        rep[i], rev[i], 
-                                        id=subName, svgdev=dev@dev)
-                     }
-                     svgAnimateRotation(angle, cx(loc$x, dev), cy(loc$y, dev),
-                                        begin[i], interp[i], dur[i],
-                                        rep[i], rev[i],
-                                        id=subName, svgdev=dev@dev)
-                     if (!"size" %in% names(animSet$animations)) {
-                         svgAnimateTranslation(-cd(pointsize, dev)/2,
-                                               -cd(pointsize, dev)/2,
-                                               begin[i], interp[i], dur[i],
-                                               rep[i], rev[i],
-                                               additive="sum",
-                                               id=subName, svgdev=dev@dev)
-                     }
-                 }
-             },
-             y={
-                 loc <- locToInches(xi, yi, dev)
-                 svgAnimateXYWH("y", cy(loc$y, dev),
-                                begin[i], interp[i], dur[i],
-                                rep[i], rev[i], subName, dev@dev)
-                 if (angle != 0) {
-                     if (!"x" %in% names(animSet$animations)) {
-                         svgAnimateXYWH("x", cx(loc$x, dev),
-                                        begin[i], interp[i], dur[i],
-                                        rep[i], rev[i], 
-                                        id=subName, svgdev=dev@dev)
-                         svgAnimateRotation(angle,
-                                            cx(loc$x, dev), cy(loc$y, dev),
-                                            begin[i], interp[i], dur[i],
-                                            rep[i], rev[i],
-                                            id=subName, svgdev=dev@dev)
-                         if (!"size" %in% names(animSet$animations)) {
-                             svgAnimateTranslation(-cd(pointsize, dev)/2,
-                                                   -cd(pointsize, dev)/2,
-                                                   begin[i], interp[i], dur[i],
-                                                   rep[i], rev[i],
-                                                   additive="sum",
-                                                   id=subName, svgdev=dev@dev)
-                         }
-                     }
-                 }
-             },
-             size={
-                 pchi <- x$pch[i]
-                 docharanim <- (is.character(pchi) && pchi != ".") ||
-                               (is.numeric(pchi) && (pchi >= 32 && pchi != 46))
-                 donumanim <- is.numeric(pchi) && pchi <= 25
-
-                 # If we don't have a good pch, don't bother
-                 if (! any(c(donumanim, docharanim)))
-                     return()
-
-                 dimsize <- cd(pointsize, dev)
-                 svgAnimateXYWH("width", dimsize,
-                                begin[i], interp[i], dur[i],
-                                rep[i], rev[i],
-                                id=subName, svgdev=dev@dev)
-                 svgAnimateXYWH("height", cd(pointsize, dev),
-                                begin[i], interp[i], dur[i],
-                                rep[i], rev[i],
-                                id=subName, svgdev=dev@dev)
-                 # Centering the point
-                 trdimsize <- -dimsize / 2
-                 additive <- "replace"
-                 if (angle != 0) {
-                     loc <- locToInches(xi, yi, dev)
-                     svgAnimateRotation(angle,
-                                        cx(loc$x, dev), cy(loc$y, dev),
-                                        begin[i], interp[i], dur[i],
-                                        rep[i], rev[i],
-                                        id=subName, svgdev=dev@dev)
-                     additive <- "sum"
-                 }
-                 svgAnimateTranslation(trdimsize, trdimsize,
-                                       begin[i], interp[i], dur[i],
-                                       rep[i], rev[i],
-                                       additive,
-                                       id=subName, svgdev=dev@dev)
-                 # Ensuring that stroke-width stays the same.
-                 # Only do this with low numeric pchs because 
-                 if (donumanim & length(dimsize) > 1) {
-                    swi <- sw[i]
-                    scalef <- dimsize / 10
-                    swi <- swi / scalef
-                    svgAnimatePointSW(swi,
+            angle <- current.rotation()
+            
+            switch(animation,
+                   x={
+                       loc <- locToInches(xi, yi, dev)
+                       svgAnimateXYWH("x", cx(loc$x, dev),
                                       begin[i], interp[i], dur[i],
                                       rep[i], rev[i],
                                       id=subName, svgdev=dev@dev)
-                 }
-             },
-             # Any other attribute
-             {
-                 svgAnimate(animation,
-                            paste(ithValue(animSet$animations[[animation]], i),
-                                  collapse=";"),
-                            begin[i], interp[i], dur[i], rep[i], rev[i], subName, dev@dev)
-             })
-  }
+                       if (angle != 0) {
+                           if (!"y" %in% names(animSet$animations)) {
+                               svgAnimateXYWH("y", cy(loc$y, dev),
+                                              begin[i], interp[i], dur[i],
+                                              rep[i], rev[i], 
+                                              id=subName, svgdev=dev@dev)
+                           }
+                           svgAnimateRotation(angle,
+                                              cx(loc$x, dev), cy(loc$y, dev),
+                                              begin[i], interp[i], dur[i],
+                                              rep[i], rev[i],
+                                              id=subName, svgdev=dev@dev)
+                           if (!"size" %in% names(animSet$animations)) {
+                               svgAnimateTranslation(-cd(pointsize, dev)/2,
+                                                     -cd(pointsize, dev)/2,
+                                                     begin[i], interp[i],
+                                                     dur[i],
+                                                     rep[i], rev[i],
+                                                     additive="sum",
+                                                     id=subName, svgdev=dev@dev)
+                           }
+                       }
+                   },
+                   y={
+                       loc <- locToInches(xi, yi, dev)
+                       svgAnimateXYWH("y", cy(loc$y, dev),
+                                      begin[i], interp[i], dur[i],
+                                      rep[i], rev[i], subName, dev@dev)
+                       if (angle != 0) {
+                           if (!"x" %in% names(animSet$animations)) {
+                               svgAnimateXYWH("x", cx(loc$x, dev),
+                                              begin[i], interp[i], dur[i],
+                                              rep[i], rev[i], 
+                                              id=subName, svgdev=dev@dev)
+                               svgAnimateRotation(angle,
+                                                  cx(loc$x, dev),
+                                                  cy(loc$y, dev),
+                                                  begin[i], interp[i], dur[i],
+                                                  rep[i], rev[i],
+                                                  id=subName, svgdev=dev@dev)
+                               if (!"size" %in% names(animSet$animations)) {
+                                   svgAnimateTranslation(-cd(pointsize, dev)/2,
+                                                         -cd(pointsize, dev)/2,
+                                                         begin[i], interp[i],
+                                                         dur[i],
+                                                         rep[i], rev[i],
+                                                         additive="sum",
+                                                         id=subName,
+                                                         svgdev=dev@dev)
+                               }
+                           }
+                       }
+                   },
+                   size={
+                       pchi <- x$pch[i]
+                       docharanim <- (is.character(pchi) && pchi != ".") ||
+                           (is.numeric(pchi) && (pchi >= 32 && pchi != 46))
+                       donumanim <- is.numeric(pchi) && pchi <= 25
+
+                       ## If we don't have a good pch, don't bother
+                       if (! any(c(donumanim, docharanim)))
+                           return()
+                       
+                       dimsize <- cd(pointsize, dev)
+                       svgAnimateXYWH("width", dimsize,
+                                      begin[i], interp[i], dur[i],
+                                      rep[i], rev[i],
+                                      id=subName, svgdev=dev@dev)
+                       svgAnimateXYWH("height", cd(pointsize, dev),
+                                      begin[i], interp[i], dur[i],
+                                      rep[i], rev[i],
+                                      id=subName, svgdev=dev@dev)
+                       ## Centering the point
+                       trdimsize <- -dimsize / 2
+                       additive <- "replace"
+                       if (angle != 0) {
+                           loc <- locToInches(xi, yi, dev)
+                           svgAnimateRotation(angle,
+                                              cx(loc$x, dev), cy(loc$y, dev),
+                                              begin[i], interp[i], dur[i],
+                                              rep[i], rev[i],
+                                              id=subName, svgdev=dev@dev)
+                           additive <- "sum"
+                       }
+                       svgAnimateTranslation(trdimsize, trdimsize,
+                                             begin[i], interp[i], dur[i],
+                                             rep[i], rev[i],
+                                             additive,
+                                             id=subName, svgdev=dev@dev)
+                       ## Ensuring that stroke-width stays the same.
+                       ## Only do this with low numeric pchs because 
+                       if (donumanim & length(dimsize) > 1) {
+                           swi <- sw[i]
+                           scalef <- dimsize / 10
+                           swi <- swi / scalef
+                           svgAnimatePointSW(swi,
+                                             begin[i], interp[i], dur[i],
+                                             rep[i], rev[i],
+                                             id=subName, svgdev=dev@dev)
+                       }
+                   },
+                   ## Any other attribute
+                   {
+                       svgAnimate(animation,
+                                  paste(ithValue(animSet$animations[[animation]], i),
+                                        collapse=";"),
+                                  begin[i], interp[i], dur[i], rep[i], rev[i],
+                                  subName, dev@dev)
+                   })
+        }
     }
 }
 

@@ -1659,7 +1659,8 @@ svgClassList <- function(classes) {
 }
 
 checkAttrs <- function(attrList, eltName) {
-    attrTable <- get("genAttrTable", .gridSVGEnv)
+    attrTable <- rbind(get("genAttrTable", .gridSVGEnv),
+                       get("presAttrTable", .gridSVGEnv))
     validAttrs <- attrTable$attribute[attrTable$element == eltName]
     names <- names(attrList)
     svgnames <- names %in% validAttrs

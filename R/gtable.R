@@ -22,10 +22,12 @@ grobToDev.gTableChild <- function(x, dev) {
 
 grobToDev.gTableParent <- function(x, dev) {
   if (is.null(getS3method("makeContent", "gtable", TRUE))) {
-    depth <- enforceVP(x$layoutvp, dev)
-    x$classes <- class(x)
-    primToDev(x, dev)
-    unwindVP(x$layoutvp, depth, dev)
+      depth1 <- enforceVP(x$vp, dev)
+      depth2 <- enforceVP(x$layoutvp, dev)
+      x$classes <- class(x)
+      primToDev(x, dev)
+      unwindVP(x$vp, depth1, dev)
+      unwindVP(x$layoutvp, depth2, dev)
   } else {
     NextMethod()
   }

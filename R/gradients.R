@@ -149,7 +149,7 @@ radialGradient <- function(col = c("black", "white"),
 
         rw <- convertWidth(r, "npc", valueOnly = TRUE)
         rh <- convertHeight(r, "npc", valueOnly = TRUE)
-        r <- pmin(rw, rh)
+        r <- pmin(abs(rw), abs(rh))
 
         fx <- convertX(fx, "npc", valueOnly = TRUE)
         fy <- convertY(fy, "npc", valueOnly = TRUE)
@@ -209,7 +209,7 @@ flattenRadialGradient <- function(gradient) {
         offsets <- getAbsoluteOffset()
         gradient$cx <- convertX(gradient$cx, "inches") + offsets[1]
         gradient$cy <- convertY(gradient$cy, "inches") + offsets[2]
-        gradient$r <- dToInches(gradient$r, NULL)
+        gradient$r <- abs(dToInches(gradient$r, NULL))
         gradient$fx <- convertX(gradient$fx, "inches") + offsets[1]
         gradient$fy <- convertY(gradient$fy, "inches") + offsets[2]
     }

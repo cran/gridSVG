@@ -1237,7 +1237,8 @@ primToDev.points <- function(x, dev) {
     devStartGroup(devGrob(x, dev), NULL, dev) 
 
     # For testing validity, convert to numerics
-    chinds <- which(! as.character(x$pch) %in% as.character(c(0:25, 32:127)))
+    chinds <- which(! is.na(x$pch) &
+                    ! as.character(x$pch) %in% as.character(c(0:25, 32:127)))
     pchtest <- x$pch
     if (length(chinds) > 0) {
         newpch <- integer(length(pchtest))
@@ -1247,7 +1248,8 @@ primToDev.points <- function(x, dev) {
         pchtest <- newpch
     }
 
-    if (any(!pchtest %in% c(0:25, 32:127)))
+    if (any(!is.na(pchtest) &
+            !pchtest %in% c(0:25, 32:127)))
         stop("Unsupported pch value")
 
     # These can differ for points
@@ -1258,6 +1260,9 @@ primToDev.points <- function(x, dev) {
     createDef <- TRUE
 
     for (i in 1:n) {
+        
+        if (is.na(pchs[i])) break
+        
         # Check whether the point symbol has been used yet
         pchUsageTable <- get("pchUsageTable", envir = .gridSVGEnv)
         # Update usages
