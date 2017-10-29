@@ -4,6 +4,12 @@
 
 \section{Changes in version 1.5-1}{
   \itemize{
+    \item Generation of SVG from \code{grid.export()} is now much faster
+    (when you are drawing many rectangles, points, circles, or lines).
+  }
+}
+\section{Changes in version 1.5-1}{
+  \itemize{
     \item Fix to ensure that \code{r} attribute in radial gradients
     is non-negative.
     

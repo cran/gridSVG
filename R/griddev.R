@@ -58,17 +58,21 @@ prefixName <- function(name) {
 gparToDevPars <- function(gp) {
     # Split up col into col plus colAlpha
     if (!is.null(gp$col)) {
-        if (is.numeric(gp$col) && gp$col == 0)
-            gp$col <- "transparent"
+        if (is.numeric(gp$col)) {
+            zeroCol <- gp$col == 0
+            gp$col[zeroCol] <- "transparent"
+        }
         rgba <- col2rgb(gp$col, alpha=TRUE)
-        gp$colAlpha <- rgba[4]
+        gp$colAlpha <- rgba[4,]
     }
     # Ditto fill
     if (!is.null(gp$fill)) {
-        if (is.numeric(gp$fill) && gp$fill == 0)
-            gp$fill <- "transparent"
+        if (is.numeric(gp$fill)) {
+            zeroFill <- gp$fill == 0
+            gp$fill[zeroFill] <- "transparent"
+        }
         rgba <- col2rgb(gp$fill, alpha=TRUE)
-        gp$fillAlpha <- rgba[4]
+        gp$fillAlpha <- rgba[4,]
     }
     gp
 }
@@ -338,14 +342,14 @@ devGrob.lines <- function(x, dev) {
 }
 
 devGrob.points <- function(x, dev) {
-  loc <- locToInches(x$x, x$y, dev)
-  list(name = x$name,
-       x = cx(loc$x, dev),
-       y = cy(loc$y, dev),
-       size = cd(dToInches(x$size), dev),
-       angle = current.rotation(),
-       classes = x$classes,
-       pch = x$pch)
+    loc <- locToInches(x$x, x$y, dev)
+    list(name = x$name,
+         x = cx(loc$x, dev),
+         y = cy(loc$y, dev),
+         size = cd(dToInches(x$size), dev),
+         angle = current.rotation(),
+         classes = x$classes,
+         pch = x$pch)
 }
 
 devGrob.polygon <- function(x, dev) {
@@ -404,15 +408,15 @@ devGrob.rastergrob <- function(x, dev) {
 }
 
 devGrob.rect <- function(x, dev) {
-  lb <- leftbottom(x$x, x$y, x$width, x$height, x$just, x$hjust, x$vjust, dev)
-  dim <- dimToInches(x$width, x$height, dev)
-  list(x=cx(lb$x, dev),
-       y=cy(lb$y, dev),
-       width=cw(dim$w, dev),
-       height=ch(dim$h, dev),
-       angle=current.rotation(),
-       classes=x$classes,
-       name=x$name)
+    lb <- leftbottom(x$x, x$y, x$width, x$height, x$just, x$hjust, x$vjust, dev)
+    dim <- dimToInches(x$width, x$height, dev)
+    list(x=cx(lb$x, dev),
+         y=cy(lb$y, dev),
+         width=cw(dim$w, dev),
+         height=ch(dim$h, dev),
+         angle=current.rotation(),
+         classes=x$classes,
+         name=x$name)
 }
 
 devGrob.text <- function(x, dev) {
@@ -485,12 +489,12 @@ devGrob.text <- function(x, dev) {
 }
 
 devGrob.circle <- function(x, dev) {
-  loc <- locToInches(x$x, x$y, dev)
-  list(x=cx(loc$x, dev),
-       y=cy(loc$y, dev),
-       r=cd(dToInches(x$r), dev),
-       classes=x$classes,
-       name=x$name)
+    loc <- locToInches(x$x, x$y, dev)
+    list(x=cx(loc$x, dev),
+         y=cy(loc$y, dev),
+         r=cd(dToInches(x$r), dev),
+         classes=x$classes,
+         name=x$name)
 }
 
 # Because viewports and grobs can be used many times, and each
@@ -1068,38 +1072,36 @@ primToDev.rastergrob <- function(x, dev) {
 }
 
 primToDev.rect <- function(x, dev) {
-  # Finding out how many rects we're dealing with
-  n <- max(length(x$x), length(x$y), length(x$width), length(x$height))
-  # Repeating components as necessary
-  xs <- rep(x$x, length.out = n)
-  ys <- rep(x$y, length.out = n)
-  widths <- rep(x$width, length.out = n)
-  heights <- rep(x$height, length.out = n)
+    ## Finding out how many rects we're dealing with
+    n <- max(length(x$x), length(x$y), length(x$width), length(x$height))
+    ## Repeating components as necessary
+    xs <- rep(x$x, length.out = n)
+    ys <- rep(x$y, length.out = n)
+    widths <- rep(x$width, length.out = n)
+    heights <- rep(x$height, length.out = n)
 
-  # Expand the gp such that it fully defines all sub-grobs
-  gp <- expandGpar(x$gp, n)
+    ## Expand the gp such that it fully defines all sub-grobs
+    gp <- expandGpar(x$gp, n)
+    
+    x$name <- getID(x$name, "grob")
 
-  x$name <- getID(x$name, "grob")
+    ## Grouping each sub-grob
+    devStartGroup(devGrob(x, dev), NULL, dev)
 
-  # Grouping each sub-grob
-  devStartGroup(devGrob(x, dev), NULL, dev)
-
-  for (i in 1:n) {
-      rg <- rectGrob(x = xs[i],
-                     y = ys[i],
-                     width = widths[i],
-                     height = heights[i],
-                     just = x$just,
-                     hjust = x$hjust,
-                     vjust = x$vjust,
-                     default.units = x$default.units,
-                     gp = gp[i],
-                     name = subGrobName(x$name, i))
-      devRect(devGrob(rg, dev), gparToDevPars(rg$gp), dev)
-  }
-
-  # Ending the group
-  devEndGroup(x$name, FALSE, dev)
+    rg <- rectGrob(x = xs,
+                   y = ys,
+                   width = widths,
+                   height = heights,
+                   just = x$just,
+                   hjust = x$hjust,
+                   vjust = x$vjust,
+                   default.units = x$default.units,
+                   gp = gp,
+                   name = subGrobName(x$name, 1:n))
+    devRect(devGrob(rg, dev), gparToDevPars(rg$gp), dev)
+    
+    ## Ending the group
+    devEndGroup(x$name, FALSE, dev)
 }
 
 primToDev.text <- function(x, dev) {
@@ -1161,33 +1163,31 @@ primToDev.text <- function(x, dev) {
 }
 
 primToDev.circle <- function(x, dev) {
-  # Finding out how many circles we're dealing with
-  n <- max(length(x$x), length(x$y), length(x$r))
-  # Repeating components as necessary
-  xs <- rep(x$x, length.out = n)
-  ys <- rep(x$y, length.out = n)
-  rs <- rep(x$r, length.out = n)
+    ## Finding out how many circles we're dealing with
+    n <- max(length(x$x), length(x$y), length(x$r))
+    ## Repeating components as necessary
+    xs <- rep(x$x, length.out = n)
+    ys <- rep(x$y, length.out = n)
+    rs <- rep(x$r, length.out = n)
 
-  # Expand the gp such that it fully defines all sub-grobs
-  gp <- expandGpar(x$gp, n)
+    ## Expand the gp such that it fully defines all sub-grobs
+    gp <- expandGpar(x$gp, n)
 
-  x$name <- getID(x$name, "grob")
+    x$name <- getID(x$name, "grob")
 
-  # Grouping each sub-grob
-  devStartGroup(devGrob(x, dev), NULL, dev)
+    ## Grouping each sub-grob
+    devStartGroup(devGrob(x, dev), NULL, dev)
 
-  for (i in 1:n) {
-      cg <- circleGrob(x = xs[i],
-                       y = ys[i],
-                       r = rs[i],
-                       default.units = x$default.units,
-                       gp = gp[i],
-                       name = subGrobName(x$name, i))
-      devCircle(devGrob(cg, dev), gparToDevPars(cg$gp), dev)
-  }
+    cg <- circleGrob(x = xs,
+                     y = ys,
+                     r = rs,
+                     default.units = x$default.units,
+                     gp = gp,
+                     name = subGrobName(x$name, 1:n))
+    devCircle(devGrob(cg, dev), gparToDevPars(cg$gp), dev)
 
-  # Ending the group
-  devEndGroup(x$name, FALSE, dev)
+    ## Ending the group
+    devEndGroup(x$name, FALSE, dev)
 }
 
 adjustSymbolSize <- function(pointSize, pgp) {
@@ -1199,20 +1199,20 @@ adjustSymbolSize <- function(pointSize, pgp) {
     # fontsize information but not when the *grob* has it.
     # Also, not recording on the DL because this viewport wasn't part
     # of the original vp tree.
-    if (! is.null(pgp$cex) || ! is.null(pgp$fontsize)) {
+    if (!is.null(pgp$cex) || !is.null(pgp$fontsize)) {
         xscale <- current.viewport()$xscale
         yscale <- current.viewport()$yscale
-        if (! (is.null(pgp$cex) & is.null(pgp$fontsize))) {
+        if (!is.null(pgp$cex) & !is.null(pgp$fontsize)) {
             pushViewport(viewport(xscale = xscale, yscale = yscale,
                                   gp = gpar(cex = pgp$cex,
-                                      fontsize = pgp$fontsize)),
+                                            fontsize = pgp$fontsize)),
                          recording = FALSE)
-        } else if (! is.null(pgp$cex)) {
+        } else if (!is.null(pgp$cex)) {
             pushViewport(viewport(xscale = xscale, yscale = yscale,
                                   gp = gpar(cex = pgp$cex)),
                          recording = FALSE)
         } else {
-            # if (! is.null(pgp$fontsize))
+            ## if (!is.null(pgp$fontsize))
             pushViewport(viewport(xscale = xscale, yscale = yscale,
                                   gp = gpar(fontsize = pgp$fontsize)),
                          recording = FALSE)
@@ -1228,17 +1228,35 @@ primToDev.points <- function(x, dev) {
     # length of x and y already checked in grid.points
     n <- length(x$x)
 
-    # Expand the gp such that it fully defines all sub-grobs
-    gp <- expandGpar(x$gp, n)
+    pgp <- x$gp
+
+    ## Force a stroke-width, col, and fill
+    if (is.null(pgp$lwd)) {
+        pgp$lwd <- get.gpar()$lwd
+    }
+    if (is.null(pgp$col)) {
+        pgp$col <- get.gpar()$col
+    }
+    if (is.null(pgp$fill)) {
+        pgp$fill <- get.gpar()$fill
+    }
+
+    ## Expand the gp such that it fully defines all sub-grobs
+    pgp <- expandGpar(pgp, n)
 
     x$name <- getID(x$name, "grob")
 
-    # Grouping each sub-grob
+    ## Grouping each sub-grob
     devStartGroup(devGrob(x, dev), NULL, dev) 
 
-    # For testing validity, convert to numerics
-    chinds <- which(! is.na(x$pch) &
-                    ! as.character(x$pch) %in% as.character(c(0:25, 32:127)))
+    ## For testing validity, convert to numerics
+    if (is.numeric(x$pch)) {
+        chinds <- numeric()
+    } else {
+        chinds <- which(!is.na(x$pch) &
+                        !(as.character(x$pch) %in%
+                          as.character(c(0:25, 32:127))))
+    }
     pchtest <- x$pch
     if (length(chinds) > 0) {
         newpch <- integer(length(pchtest))
@@ -1247,76 +1265,57 @@ primToDev.points <- function(x, dev) {
         newpch[!chinds] <- as.numeric(pchtest[!chinds])
         pchtest <- newpch
     }
-
     if (any(!is.na(pchtest) &
             !pchtest %in% c(0:25, 32:127)))
         stop("Unsupported pch value")
 
-    # These can differ for points
+    ## These can differ for points
     pchs <- rep(pchtest, length.out = n)
     sizes <- rep(x$size, length.out = n)
 
-    # Assume we need to define the point symbol
-    createDef <- TRUE
+    ## Check whether the point symbol has been used yet
+    pchUsageTable <- get("pchUsageTable", envir = .gridSVGEnv)
+    ## Update usages
+    pchUsageTable[pchs + 1, "used"] <- TRUE
+    assign("pchUsageTable", pchUsageTable, envir = .gridSVGEnv)
 
-    for (i in 1:n) {
-        
-        if (is.na(pchs[i])) break
-        
-        # Check whether the point symbol has been used yet
-        pchUsageTable <- get("pchUsageTable", envir = .gridSVGEnv)
-        # Update usages
-        pchUsageTable[pchs[i] + 1, "used"] <- TRUE
-        assign("pchUsageTable", pchUsageTable, envir = .gridSVGEnv)
-
-        pgp <- gp[i]
-
-        if (! is.unit(sizes[i]) && is.numeric(sizes[i])) {
-            # Just a number -- convert to a unit
-            pointSize <- unit(sizes[i], x$default.units)
-        } else {
-            # All other units
-            pointSize <- sizes[i]
-        }
-        
-        asciipch <- if (pchs[i] %in% 32:127)
-                        rawToChar(as.raw(pchs[i]))
-                    else
-                        pchs[i]
-
-        # Force a stroke-width
-        pgp$lwd <- if (is.null(pgp$lwd)) get.gpar()$lwd
-                   else pgp$lwd
-
-        if (pchs[i] < 15)
-            pgp$fill <- "transparent"
-
-        if (pchs[i] %in% 15:20 | pchs[i] >= 32) {
-            # 46 == "."
-            # Don't do anything for a "." because we need a
-            # stroke for it to be visible
-            if (pchs[i] != 46) {
-                pgp$fill <- if (is.null(pgp$col)) get.gpar()$col
-                            else pgp$col
-                if (pchs[i] %in% 15:18 | pchs[i] >= 32)
-                    pgp$col <- "transparent"
-            }
-        }
-
-        # Size is now relative to text so use text grob
-        if (pchs[i] >= 32)
-            pointSize <- grobWidth(textGrob(asciipch))
-
-        # Enforce gp$cex or gp$fontsize
-        pointSize <- adjustSymbolSize(pointSize, pgp)
-        
-        devUseSymbol(devGrob(pointsGrob(x$x[i], x$y[i],
-                                        pch = asciipch,
-                                        size = pointSize,
-                                        default.units = x$default.units,
-                                        name = subGrobName(x$name, i)), dev),
-                     gparToDevPars(pgp), dev)
+    if (!is.unit(sizes) && is.numeric(sizes)) {
+        ## Just a number -- convert to a unit
+        pointSize <- unit(sizes, x$default.units)
+    } else {
+        ## All other units
+        pointSize <- sizes
     }
+
+    if (any(pchs) %in% 32:127) {
+        asciipch <- sapply(pchs, function(x) rawToChar(as.raw(x)))
+    } else {
+        asciipch <- pchs
+    }
+
+    pgp$fill[pchs < 15] <- "transparent"
+
+    ## 46 == "."
+    ## Don't do anything for a "." because we need a
+    ## stroke for it to be visible
+    noStroke <- pchs %in% 15:20 | (pchs >= 32 & pchs != 46)
+    if (any(noStroke)) {
+        pgp$fill[noStroke] <- pgp$col[noStroke]
+        pgp$col[noStroke & pchs %in% 15:18] <- "transparent"
+    }
+
+    ## Size is now relative to text so use text grob
+    ## pointSize[pchs >= 32] <- grobWidth(textGrob(asciipch[pchs >= 32]))
+
+    ## Enforce gp$cex or gp$fontsize
+    pointSize <- adjustSymbolSize(pointSize, pgp)
+
+    pg <- pointsGrob(x$x, x$y,
+                     pch = asciipch,
+                     size = pointSize,
+                     default.units = x$default.units,
+                     name = subGrobName(x$name, 1:n))
+    devUseSymbol(devGrob(pg, dev), gparToDevPars(pgp), dev)
 
     # Ending the group
     devEndGroup(x$name, FALSE, dev)

@@ -47,59 +47,60 @@ devParNameToSVGStyleName <- function(name) {
 # However, most (perhaps all?) devices use 1/96 for their
 # definition of an 'lwd', so use that.
 devLwdToSVG <- function(lwd, lty, dev) {
-    if (!is.null(lty) && lty == "blank") {
-        0
-    } else {
-        round(lwd/96 * dev@res, 2)
+    svglwd <- round(lwd/96 * dev@res, 2)
+    if (!is.null(lty)) {
+        blankLty <- lty == "blank"
+        svglwd[blankLty] <- 0
     }
+    svglwd
 }
 
 # An R lty has to become an SVG stroke-dasharray
 # This is going to be imperfect (to say the least)
-devLtyToSVG <- function(lty, lwd, dev) {
+devLtyToSVG <- function(lty, lwd) {
     ## If necessary, convert numeric lty to char
     if (is.numeric(lty)) {
-        if (lty == 0) {
-            lty <- "blank"
-        } else {
-            lty <- switch(lty,
-                          "solid",
-                          "dashed",
-                          "dotted",
-                          "dotdash",
-                          "longdash",
-                          "twodash")
-        }
+        lty[lty == 0] <- "blank"
+        lty[lty == 1] <- "solid"
+        lty[lty == 2] <- "dashed"
+        lty[lty == 3] <- "dotted"
+        lty[lty == 4] <- "dotdash"
+        lty[lty == 5] <- "longdash"
+        lty[lty == 6] <- "twodash"
     }
     # Convert lty to numeric vec
-    numlty <- switch(lty,
-                     blank=,
-                     solid=0,
-                     # These numbers taken from ?par
-                     dashed=c(4, 4),
-                     dotted=c(1, 3),
-                     dotdash=c(1, 3, 4, 3),
-                     longdash=c(7, 3),
-                     twodash=c(2, 2, 6, 2),
-                     # Otherwise we're a hex string
-                     as.numeric(as.hexmode(strsplit(lty, "")[[1]])))
+    numlty <- lapply(lty,
+                     function(x) {
+                         switch(x,
+                                blank=,
+                                solid=0,
+                                ## These numbers taken from ?par
+                                dashed=c(4, 4),
+                                dotted=c(1, 3),
+                                dotdash=c(1, 3, 4, 3),
+                                longdash=c(7, 3),
+                                twodash=c(2, 2, 6, 2),
+                                ## Otherwise we're a hex string
+                                as.numeric(as.hexmode(strsplit(lty, "")[[1]])))
+                     })
     # Scale by lwd
-    scaledlty <- numlty * lwd
+    scaledlty <- mapply(function(x, y) x*y, numlty, lwd, SIMPLIFY=FALSE)
     # Convert to SVG stroke-dasharray string
-    paste(ifelse(scaledlty == 0, "none", round(scaledlty, 2)),
-          collapse=",")
+    sapply(scaledlty,
+           function(x) {
+               paste(ifelse(x == 0, "none", round(x, 2)), collapse=",")
+           })
 }
 
 devColToSVG <- function(col) {
-  if (length(col) > 1)
-    warning("Only first colour used")
-  if (is.numeric(col) && col == 0)
-      col <- "transparent"
-  # Handle "transparent" as a special case
-  if (col == "transparent")
-      "none"
-  else
-      paste("rgb(", paste(col2rgb(col), collapse=","), ")", sep="")
+    zeroCol <- is.numeric(col) & col == 0
+    col[zeroCol] <- "transparent"
+    svgCol <- paste("rgb(", apply(col2rgb(col), 2, paste, collapse=","), ")",
+                    sep="")
+    ## Handle "transparent" as a special case
+    transCol <- col == "transparent"
+    svgCol[transCol] <- "none"
+    svgCol
 }
 
 devColAlphaToSVG <- function(colAlpha) {
@@ -112,70 +113,32 @@ devFontSizeToSVG <- function(fontsize, dev) {
 
 devLineJoinToSVG <- function(linejoin, dev) {
     # Only need to change spelling of mitre, SVG takes american form
-    if (linejoin == "mitre")
-        "miter"
-    else
-        linejoin
+    ifelse(linejoin == "mitre", "miter", linejoin)
 }
 
 devFontFaceToSVG <- function(fontface) {
     # CSS uses two different properties to configure the appearance of a font
     # Setting defaults to CSS defaults
-    fontWeightCSS <- "normal"
-    fontStyleCSS <- "normal"
+    N <- length(fontface)
+    fontWeightCSS <- rep("normal", N)
+    fontStyleCSS <- rep("normal", N)
 
     if (is.numeric(fontface)) {
-        if (fontface == 1) {
-            # plain
-            fontWeightCSS <- "normal"
-            fontStyleCSS <- "normal"
-        }
-
-        if (fontface == 2) {
-            # bold
-            fontWeightCSS <- "bold"
-            fontStyleCSS <- "normal"
-        }
-
-        if (fontface == 3) {
-            # italic
-            fontWeightCSS <- "normal"
-            fontStyleCSS <- "italic"
-        }
-
-        if (fontface == 4) {
-            # bold italic
-            fontWeightCSS <- "bold"
-            fontStyleCSS <- "italic"
-        }
+        ffbold <- fontface == 2
+        ffitalic <- fontface == 3
+        ffbolditalic <- fontface == 4
     }
 
     if (is.character(fontface)) {
-        if (fontface == "plain") {
-            fontWeightCSS <- "normal"
-            fontStyleCSS <- "normal"
-        }
-
-        if (fontface == "bold") {
-            fontWeightCSS <- "bold"
-            fontStyleCSS <- "normal"
-        }
-
-        if (fontface == "italic") {
-            fontWeightCSS <- "normal"
-            fontStyleCSS <- "italic"
-        }
-
-        if (fontface == "oblique") {
-            fontWeightCSS <- "normal"
-            fontStyleCSS <- "oblique"
-        }
-
-        if (fontface == "bold.italic") {
-            fontWeightCSS <- "bold"
-            fontStyleCSS <- "italic"
-        }
+        ffbold <- fontface == "bold"
+        ffitalic <- fontface == "italic"
+        ffbolditalic <- fontface == "bold.italic"
     }
+
+    fontWeightCSS[ffbold] <- "bold"
+    fontStyleCSS[ffitalic] <- "italic"
+    fontWeightCSS[ffbolditalic] <- "bold"
+    fontStyleCSS[ffbolditalic] <- "italic"
 
     list(fontweight=fontWeightCSS,
          fontstyle=fontStyleCSS)
@@ -227,55 +190,63 @@ setSVGFonts(list(sans = sansFontStack,
                  mono = monoFontStack))
 
 fontStackFromFontFamily <- function(fontfamily, currentFonts) {
-    if (fontfamily %in% c(currentFonts$sans, "sans"))
-        "sans"
-    else if (fontfamily %in% currentFonts$serif)
-        "serif"
-    else if (fontfamily %in% c(currentFonts$mono, "mono"))
-        "mono"
-    else 
-        "unknown"
+    N <- length(fontfamily)
+    stack <- rep("sans", N)
+    
+    sansfamily <- fontfamily %in% c(currentFonts$sans, "sans")
+    seriffamily <- fontfamily %in% c(currentFonts$serif, "serif")
+    monofamily <- fontfamily %in% c(currentFonts$mono, "mono")
+    
+    stack[seriffamily] <- "serif"
+    stack[monofamily] <- "mono"
+    stack[!(sansfamily | seriffamily | monofamily)] <- "unknown"
+    stack
 }
 
-devFontFamilyToSVG <- function(fontfamily, dev) {
+devFontFamilyToSVG <- function(fontfamily) {
     currentFonts <- getSVGFonts()
-    stackname <- fontStackFromFontFamily(fontfamily, currentFonts)
+    stacknames <- fontStackFromFontFamily(fontfamily, currentFonts)
 
-    if (stackname == "unknown") {
-        if (nchar(fontfamily) > 0)
-            # Assume font exists, but also assume sans-serif fallback
-            fontstack <- c(fontfamily, currentFonts$sans)
-        else 
-            fontstack <- currentFonts$sans # Assuming a sans-serif font
-    } else {
-        fontstack <- currentFonts[[stackname]]
+    knownFont <- stacknames != "unknown"
+    blankFont <- nchar(fontfamily) == 0
+
+    fontstacks <- vector("list", length(fontfamily))
+    fontstacks[knownFont] <- currentFonts[stacknames[knownFont]]
+    ## Assume font exists, but also assume sans-serif fallback
+    if (any(!knownFont & !blankFont)) {
+        fontstacks[!knownFont & !blankFont] <-
+            list(c(fontfamily[!knownFont & !blankFont], currentFonts$sans))
+    }
+    ## Assuming a sans-serif font
+    if (any(!knownFont & blankFont)) {
+        fontstacks[!knownFont & blankFont] <- list(currentFonts$sans)
     }
     
     # Formatting the font stack for CSS
-    fontStackCSS <- paste(fontstack, collapse=', ')
+    fontStackCSS <- sapply(fontstacks, paste, collapse=', ')
 
     # Returning the font stack
     fontStackCSS
 }
 
 devParToSVGPar <- function(name, par, dev) {
-  if (is.null(par))
-    "none"
-  else {
-      ifelse(is.na(par),
-             "none",
-             switch(name,
-                    col=devColToSVG(par),
-                    colAlpha=devColAlphaToSVG(par),
-                    fill=devColToSVG(par),
-                    fillAlpha=devColAlphaToSVG(par),
-                    fontsize=devFontSizeToSVG(par, dev),
-                    fontfamily=devFontFamilyToSVG(par, dev),
-                    linejoin=devLineJoinToSVG(par, dev),
-                    # By default just pass through the actual value
-                    # e.g., lty has already been converted at this point
-                    par))
-  }
+    if (is.null(par))
+        "none"
+    else {
+        ifelse(is.na(par),
+               "none",
+               switch(name,
+                      col=devColToSVG(par),
+                      colAlpha=devColAlphaToSVG(par),
+                      fill=devColToSVG(par),
+                      fillAlpha=devColAlphaToSVG(par),
+                      fontsize=devFontSizeToSVG(par, dev),
+                      fontfamily=devFontFamilyToSVG(par),
+                      linejoin=devLineJoinToSVG(par, dev),
+                      ## By default just pass through the actual value
+                      ## e.g., lty has already been converted at this point
+                      par))
+    }
 }
 
 devParToSVGStyle <- function(gp, dev) {
@@ -314,9 +285,9 @@ devParToSVGStyle <- function(gp, dev) {
         # Scale lty by lwd
         if ("lty" %in% names(gp)) {
             if ("lwd" %in% names(gp)) {
-                gp$lty <- devLtyToSVG(gp$lty, gp$lwd, dev)
+                gp$lty <- devLtyToSVG(gp$lty, gp$lwd)
             } else {
-                gp$lty <- devLtyToSVG(gp$lty, 1, dev)
+                gp$lty <- devLtyToSVG(gp$lty, 1)
             }
         }
         # Font is an alias for fontface, set to fontface
@@ -417,10 +388,10 @@ setMethod("devRaster", signature(device="svgDevice"),
 
 setMethod("devRect", signature(device="svgDevice"),
           function(rect, gp, device) {
-            svgRect(rect$x, rect$y, rect$width, rect$height, rect$angle,
-                    rect$name,
-                    device@attrs, device@links, device@show,
-                    devParToSVGStyle(gp, device), device@dev)
+            svgRectString(rect$x, rect$y, rect$width, rect$height, rect$angle,
+                          rect$name,
+                          device@attrs, device@links, device@show,
+                          devParToSVGStyle(gp, device), device@dev)
           })
 
 setMethod("devText", signature(device="svgDevice"),
@@ -439,9 +410,9 @@ setMethod("devText", signature(device="svgDevice"),
 
 setMethod("devCircle", signature(device="svgDevice"),
           function(circle, gp, device) {
-            svgCircle(circle$x, circle$y, circle$r, circle$name,
-                      device@attrs, device@links, device@show,
-                      devParToSVGStyle(gp, device), device@dev)
+              svgCircleString(circle$x, circle$y, circle$r, circle$name,
+                              device@attrs, device@links, device@show,
+                              devParToSVGStyle(gp, device), device@dev)
           })
 
 setMethod("devStartElement", signature(device="svgDevice"),
@@ -612,10 +583,11 @@ setMethod("devEndSymbol", signature(device="svgDevice"),
 
 setMethod("devUseSymbol", signature(device="svgDevice"),
           function(point, gp, device) {
-            svgUseSymbol(point$name, point$x, point$y, point$size, point$pch,
-                         point$angle,
-                         device@attrs, device@links, device@show,
-                         devParToSVGStyle(gp, device), device@dev)
+            svgUseSymbolString(point$name, point$x, point$y,
+                               point$size, point$pch,
+                               point$angle,
+                               device@attrs, device@links, device@show,
+                               devParToSVGStyle(gp, device), device@dev)
           })
 
 setMethod("devClose", signature(device="svgDevice"),

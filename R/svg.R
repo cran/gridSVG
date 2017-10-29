@@ -571,60 +571,69 @@ svgAnimateScale <- function(xvalues, yvalues,
                       additive, id, svgdev)
 }
 
+genAlpha <- function(N) {
+    m <- suppressWarnings(matrix(rep(letters, length.out=N), nrow=26))
+    alpha <- apply(m, 1, 
+                   function(x) {
+                       unlist(lapply(mapply(rep, x, 1:length(x)),
+                                     paste, collapse=""))
+                   })
+    t(alpha)[1:N]
+}
+
 svgLines <- function(x, y, id=NULL, arrow = NULL,
                      attributes=svgAttrib(), links=NULL, show=NULL,
                      style=svgStyle(), svgdev=svgDevice()) {
 
-  # Never fill a line
-  style$fill <- "none"
-
-  has.link <- hasLink(links[id])
-  if (has.link)
-    svgStartLink(links[id], show[id], svgdev)
-
-  # Handle NA values in (x, y)
-  xylist <- splitOnNA(x, y)
-  N <- length(xylist)
-  if (N > 0) {
-      if (N > 1) {
-          # assume no more than 26 NAs in (x, y)!
-          alpha <- letters[1:N]
-      } else {
-          alpha <- ""
-      }
-      for (i in 1:N) {
-          # Grabbing arrow info for marker element references
-          # Arrows NOT drawn at NA splits
-          if (! is.null(arrow$ends)) {
-              if (arrow$ends == "both" && i == 1 && N == 1) 
-                  lineMarkerTxt <- markerTxt("both", id)
-              else if ((arrow$ends == "both" || arrow$ends == "first") &&
-                       i == 1 && is.finite(x[1]) && is.finite(y[1]))
-                  lineMarkerTxt <- markerTxt("first", id)
-              else if ((arrow$ends == "both" || arrow$ends == "last") &&
-                       i == N &&
-                       is.finite(x[length(x)]) && is.finite(y[length(y)]))
-                  lineMarkerTxt <- markerTxt("last", id)
-              else 
-                  lineMarkerTxt <- NULL
-          } else {
-              lineMarkerTxt <- NULL
-          }
-          attrlist <- c(list(id = prefixName(paste0(id, alpha[i])),
-                             points = paste0(round(xylist[[i]]$x, 2), ",",
-                                 round(xylist[[i]]$y, 2),
-                                 collapse=" ")),
-                        lineMarkerTxt,
-                        svgStyleAttributes(style, svgdev),
-                        svgAttribTxt(attributes, id, "polyline", svgdev))
-          attrlist <- attrList(attrlist)
-          newXMLNode("polyline", parent = svgDevParent(svgdev),
-                     attrs = attrlist)
-      }
-  }
-  
-  if (has.link)
-    svgEndLink(svgdev)
+    ## Never fill a line
+    style$fill <- "none"
+    
+    has.link <- hasLink(links[id])
+    if (has.link)
+        svgStartLink(links[id], show[id], svgdev)
+    
+    ## Handle NA values in (x, y)
+    xylist <- splitOnNA(x, y)
+    N <- length(xylist)
+    if (N > 0) {
+        if (N > 1) {
+            alpha <- genAlpha(N)
+        } else {
+            alpha <- ""
+        }
+        for (i in 1:N) {
+            ## Grabbing arrow info for marker element references
+            ## Arrows NOT drawn at NA splits
+            if (! is.null(arrow$ends)) {
+                if (arrow$ends == "both" && i == 1 && N == 1) 
+                    lineMarkerTxt <- markerTxt("both", id)
+                else if ((arrow$ends == "both" || arrow$ends == "first") &&
+                         i == 1 && is.finite(x[1]) && is.finite(y[1]))
+                    lineMarkerTxt <- markerTxt("first", id)
+                else if ((arrow$ends == "both" || arrow$ends == "last") &&
+                         i == N &&
+                         is.finite(x[length(x)]) && is.finite(y[length(y)]))
+                    lineMarkerTxt <- markerTxt("last", id)
+                else 
+                    lineMarkerTxt <- NULL
+            } else {
+                lineMarkerTxt <- NULL
+            }
+            attrlist <- c(list(id = prefixName(paste0(id, alpha[i])),
+                               points = paste0(round(xylist[[i]]$x, 2), ",",
+                                               round(xylist[[i]]$y, 2),
+                                               collapse=" ")),
+                          lineMarkerTxt,
+                          svgStyleAttributes(style, svgdev),
+                          svgAttribTxt(attributes, id, "polyline", svgdev))
+            attrlist <- attrList(attrlist)
+            newXMLNode("polyline", parent = svgDevParent(svgdev),
+                       attrs = attrlist)
+        }
+    }
+    
+    if (has.link)
+        svgEndLink(svgdev)
 }
 
 svgMarker <- function(x, y, type, ends, direction, name,
@@ -737,8 +746,7 @@ svgPolygon <- function(x, y, id=NULL,
   N <- length(xylist)
   if (N > 0) {
       if (N > 1) {
-          # assume no more than 26 NAs in (x, y)!
-          alpha <- letters[1:N]
+          alpha <- genAlpha(N)
       } else {
           alpha <- ""
       }
