@@ -970,22 +970,57 @@ primToDev.xspline <- function(x, dev) {
 }
 
 primToDev.pathgrob <- function(x, dev) {
-  x$name <- getID(x$name, "grob")
+    x$name <- getID(x$name, "grob")
 
-  # Grouping the grob
-  devStartGroup(devGrob(x, dev), NULL, dev)
+    ## Grouping the grob
+    devStartGroup(devGrob(x, dev), NULL, dev)
 
-  # This is a bit of a special case where we know there is only one
-  # actual graphical object that is being created, so we are simply
-  # going to modify it's name in place.
-  oldname <- x$name
-  x$name <- subGrobName(x$name, 1)
+    hasMultiple <- !(is.null(x$pathId) && is.null(x$pathId.lengths))
 
-  devPath(devGrob(x, dev), gparToDevPars(x$gp), dev)
-
-  # Ending the group
-  x$name <- oldname
-  devEndGroup(x$name, FALSE, dev)
+    oldname <- x$name
+    if (hasMultiple) {
+        if (is.null(x$pathId)) {
+            n <- length(x$pathId.lengths)
+            pathId <- rep(1L:n, x$pathId.lengths)
+        } else {
+            n <- length(unique(x$pathId))
+            pathId <- x$pathId
+        }
+        if (is.null(x$id) && is.null(x$id.length)) {
+            id <- rep(1, length(x$x))
+        } else if (is.null(x$id)) {
+            id <- rep(1L:length(x$id.lengths), x$id.lengths)
+        } else {
+            id <- x$id
+        }
+        
+        gp <- expandGpar(x$gp, n)
+        listX <- split(x$x, pathId)
+        listY <- split(x$y, pathId)
+        listID <- split(id, pathId)
+        
+        for (i in 1:n) {
+            pg <- pathGrob(x  = listX[[i]],
+                           y  = listY[[i]],
+                           id = listID[[i]],
+                           rule = x$rule,
+                           gp = gp[i],
+                           default.units = x$default.units,
+                           name = subGrobName(x$name, i))
+            devPath(devGrob(pg, dev), gparToDevPars(pg$gp), dev)
+        }
+    } else {
+        ## This is a bit of a special case where we know there is only one
+        ## actual graphical object that is being created, so we are simply
+        ## going to modify it's name in place.
+        x$name <- subGrobName(x$name, 1)
+        gp <- expandGpar(x$gp, 1)
+        devPath(devGrob(x, dev), gparToDevPars(gp), dev)
+    }
+    
+    ## Ending the group
+    x$name <- oldname
+    devEndGroup(x$name, FALSE, dev)
 }
 
 primToDev.rastergrob <- function(x, dev) {
@@ -1298,7 +1333,7 @@ primToDev.points <- function(x, dev) {
     ## 46 == "."
     ## Don't do anything for a "." because we need a
     ## stroke for it to be visible
-    noStroke <- pchs %in% 15:20 | (pchs >= 32 & pchs != 46)
+    noStroke <- !is.na(pchs) & (pchs %in% 15:20 | (pchs >= 32 & pchs != 46))
     if (any(noStroke)) {
         pgp$fill[noStroke] <- pgp$col[noStroke]
         pgp$col[noStroke & pchs %in% 15:18] <- "transparent"

@@ -18,14 +18,14 @@ svgPolygon(c(23.81, 67.45, 89.27, 23.81),
            c(31.09, 31.09, 147.45, 118.36),
            style=svgStyle(fill="grey"),
            svgdev=svgdev)
-svgRect(132.90, c(89.27, 205.63), 43.63, 29.09,
+svgRect(132.90, 89.27, 43.63, 29.09,
         style=svgStyle(fill="cyan"),
         svgdev=svgdev)
-svgText(45.63, c(234.728, 205.63),
-        c("some text", "some more text!"),
+svgText(45.63, 234.728,
+        "some text",
         style=svgStyle(fill="red"),
         svgdev=svgdev)
-svgCircle(176.54, 89.27, c(2.18, 43.63),
+svgCircle(176.54, 89.27, 2.18,
           style=svgStyle(stroke="blue", fill="none"),
           svgdev=svgdev)
 svgText(89.27, 147.45, "centred text", hjust="centre", vjust="centre", rot=20,

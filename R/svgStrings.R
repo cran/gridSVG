@@ -186,12 +186,13 @@ svgUseSymbolString <- function(id, x, y, size, pch, angle=0,
     tmpattr$`stroke-width` <- round(sw, 2)
     
     ## For pch outside 0-25 or character pch
+    napch <- is.na(pch)
     if (is.character(pch)) {
-        isDot <- pch == "."
-        isChar <- !isDot
+        isDot <- !napch & pch == "."
+        isChar <- !napch & !isDot
     } else if (is.numeric(pch)) {
-        isDot <- pch == 46
-        isChar <- pch > 25 & !isDot
+        isDot <- !napch & pch == 46
+        isChar <- !napch & pch > 25 & !isDot
     }
     if (!is.null(tmpattr$"font-size")) {
         ## Strip unnecessary attribs
