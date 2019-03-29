@@ -54,7 +54,7 @@ feColorMatrix(input = NA,
   An \code{fe.color.matrix} object.
 }
 \references{
-  \url{www.w3.org/TR/SVG/filters.html#feColorMatrixElement}
+  \url{http://www.w3.org/TR/SVG/filters.html#feColorMatrixElement}
 }
 \author{
   Simon Potter

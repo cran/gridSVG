@@ -262,24 +262,11 @@ gridsvg <- function(name = "Rplots.svg",
     deviceNames <- unlist(.Devices)
     if ("gridsvg" %in% deviceNames)
         stop("Only one 'gridsvg' device may be used at a time")
-    fncall <- match.call(expand.dots = FALSE)
-    arglen <- length(fncall) - 1
-    argnames <- names(fncall)
-    gridsvg.args <- list()
-    dev.args <- list()
-    for (i in seq_len(arglen) + 1) {
-        argname <- argnames[[i]]
-        if (argname == "...")
-            dev.args <- eval(fncall[[i]])
-        else
-            gridsvg.args[[argname]] <- eval(fncall[[i]])
-    }
-    for (i in seq_along(dev.args))
-        dev.args[[i]] <- eval(dev.args[[i]])
-    fileind <- which(names(dev.args) == "file")
-    if (length(fileind))
-        dev.args[[fileind]] <- NULL
-    dev.args <- c(list(file = NULL), dev.args)
+    argnames <- setdiff(names(formals()), '...')
+    gridsvg.args <- sapply(argnames, get, environment(), simplify = FALSE)
+    dev.args <- list(...)
+    dev.args$file <- NULL  # remove file arg
+    dev.args <- c(list(file = NULL), dev.args)  # readd
     do.call("pdf", dev.args)
     gridSVGArgs <-
         if (exists("gridSVGArgs", envir = .gridSVGEnv))
