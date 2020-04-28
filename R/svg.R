@@ -829,19 +829,10 @@ svgRaster <- function(x, y, width, height, angle=0, datauri, id=NULL,
     if (has.link)
         svgStartLink(links[id], show[id], svgdev)
 
-    if (width < 0) {
-        x <- x + width # shifts x to the left
-        width <- abs(width)
-    }
-    if (height < 0) {
-        y <- y + height # shifts y down
-        height <- abs(height)
-    }
-
     rx <- round(x, 2)
     ry <- round(y, 2)
 
-    transform <- paste0("translate(", rx, ", ", round(height + y, 2), ")")
+    transform <- paste0("translate(", rx, ", ", round(ry, 2), ")")
     angleTransform <- svgAngleTransform(rx, ry, angle)
     if (!is.null(angleTransform)) {
         transform <- paste(angleTransform, transform)
@@ -858,7 +849,7 @@ svgRaster <- function(x, y, width, height, angle=0, datauri, id=NULL,
                                            sep = getSVGoption("id.sep")),
                               transform = paste0("scale(",
                                   round(width, 2), ", ",
-                                  round(-height, 2), ")")),
+                                  round(height, 2), ")")),
                           newXMLNode("image",
                                      # Suppress the namespace warning because
                                      # we know in this specific case it is
@@ -868,6 +859,7 @@ svgRaster <- function(x, y, width, height, angle=0, datauri, id=NULL,
                                          y = 0,
                                          width = 1,
                                          height = 1,
+                                         transform = "scale(1, -1) translate(0, -1)",
                                          "xlink:href" = datauri,
                                          preserveAspectRatio = "none"))))
 

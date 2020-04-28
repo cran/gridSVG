@@ -1155,7 +1155,7 @@ primToDev.text <- function(x, dev) {
     # Checking that no element of label vector is empty
     if (!is.language(x$label)) {
         textLabel <- sapply(x$label, function(t) {
-            if (nchar(t) == 0 | length(t) == 0)
+            if (is.na(t) || nchar(t) == 0 || length(t) == 0)
                 " "
             else
                 t

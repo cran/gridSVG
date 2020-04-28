@@ -1284,7 +1284,7 @@ applyAnimation.rastergrob <- function(x, animSet, animation, group, dev) {
                            additive <- "sum"
                        }
                        svgAnimateTranslation(cx(lb$x, dev),
-                                             ch(dim$h, dev) + cy(lb$y, dev),
+                                             cy(lb$y, dev),
                                              begin[i], interp[i], dur[i],
                                              rep[i], rev[i],
                                              additive,
@@ -1334,7 +1334,7 @@ applyAnimation.rastergrob <- function(x, animSet, animation, group, dev) {
                                                  additive,
                                                  subName, dev@dev)
                        }
-                       svgAnimateScale(cw(dim$w, dev), -ch(dim$h, dev), 
+                       svgAnimateScale(cw(dim$w, dev), ch(dim$h, dev), 
                                        begin[i], interp[i], dur[i],
                                        rep[i], rev[i],
                                        id=paste(subName, "scale",
@@ -1366,7 +1366,7 @@ applyAnimation.rastergrob <- function(x, animSet, animation, group, dev) {
                                                      additive,
                                                      subName, dev@dev)
                            }
-                           svgAnimateScale(cw(dim$w, dev), -ch(dim$h, dev), 
+                           svgAnimateScale(cw(dim$w, dev), ch(dim$h, dev), 
                                            begin[i], interp[i], dur[i],
                                            rep[i], rev[i],
                                            id=paste(subName, "scale",
