@@ -470,7 +470,8 @@ feColorMatrix <- function(input = NA,
                           type = c("matrix", "saturate", "hueRotate", "luminanceToAlpha"),
                           values = NULL, ...) {
     # Checking validity of args
-    if (type == "matrix" && (! is.matrix(values) || ! dim(values) == c(4, 5)))
+    if (type == "matrix" &&
+        (! is.matrix(values) || ! all(dim(values) == c(4, 5))))
         stop("'values' must be a 4x5 numeric matrix when 'type' is 'matrix'")
     if (type == "saturate" && ! is.numeric(values))
         stop("'values' must be a single element numeric vector for 'saturate'")

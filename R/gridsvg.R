@@ -8,6 +8,17 @@ gridToSVG <- function(...) {
     grid.export(...)
 }
 
+
+getDev <- function() {
+    get("gridSVGdev", envir = .gridSVGEnv, inherits = FALSE)
+}
+
+setDev <- function(dev) {
+    assign("gridSVGdev", dev, envir = .gridSVGEnv)
+}
+
+setDev(0)
+
 # User function
 grid.export <- function(name = "Rplots.svg",
                         exportCoords = c("none", "inline", "file"),
@@ -259,8 +270,7 @@ gridsvg <- function(name = "Rplots.svg",
                     ...) {
     # Avoid multiple gridSVG devices (because referenced content can
     # have side effects across devices)
-    deviceNames <- unlist(.Devices)
-    if ("gridsvg" %in% deviceNames)
+    if (getDev() != 0)
         stop("Only one 'gridsvg' device may be used at a time")
     argnames <- setdiff(names(formals()), '...')
     gridsvg.args <- sapply(argnames, get, environment(), simplify = FALSE)
@@ -273,28 +283,27 @@ gridsvg <- function(name = "Rplots.svg",
             get("gridSVGArgs", envir = .gridSVGEnv)
         else
             list()
-    gridSVGArgs[[dev.cur()]] <- gridsvg.args
+    gridSVGArgs <- gridsvg.args
     assign("gridSVGArgs", gridSVGArgs, envir = .gridSVGEnv)
-    # HACK!
-    # This renames the pdf device to "gridsvg" purely for convenience.
-    devs <- .Devices
-    devs[[dev.cur()]] <- "gridsvg"
-    assign(".Devices", devs, envir = baseenv())
+    ## Record which device is the gridSVG device
+    setDev(dev.cur())
 }
 
 dev.off <- function(which = dev.cur()) {
-    if (.Devices[[which]] == "gridsvg") {
+    if (which == getDev()) {
         # If there's nothing on the display list then nothing
         # can be drawn
         if (! length(grid.ls(print = FALSE)$name)) {
             grDevices::dev.off(which)
             warning("No grid image was drawn so no SVG was created")
+            setDev(0)
             return(invisible())
         }
-        gridsvg.args <- get("gridSVGArgs", envir = .gridSVGEnv)[[which]]
+        gridsvg.args <- get("gridSVGArgs", envir = .gridSVGEnv)
         name <- gridsvg.args$name
         image <- do.call("grid.export", gridsvg.args)
         grDevices::dev.off(which)
+        setDev(0)
         if (is.null(name) || ! nzchar(name))
             image
         else
