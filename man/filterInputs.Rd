@@ -76,5 +76,5 @@
   Simon Potter
 }
 \references{
-  \url{http://www.w3.org/TR/SVG/filters.html#FilterPrimitiveInAttribute}
+  \url{https://www.w3.org/TR/SVG/filters.html#FilterPrimitiveInAttribute}
 }

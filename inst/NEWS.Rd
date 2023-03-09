@@ -2,6 +2,14 @@
 \title{NEWS file for the gridSVG package}
 \encoding{UTF-8}
 
+\section{Changes in version 1.7-5}{
+  \itemize{
+    \item Fix in \code{escapeXPath()} for \dQuote{the condition has
+      length > 1} error.  Thanks to Dzimitry Markouski.
+    
+    \item Fixes for problems found by \code{tools::checkS3methods()}.
+  }
+}
 \section{Changes in version 1.7-4}{
   \itemize{
     \item Fix in \code{feColorMatrix()} for \dQuote{length > 1 in

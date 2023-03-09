@@ -69,7 +69,7 @@ feTurbulence(baseFrequency = 0, numOctaves = 1,
   An \code{fe.turbulence} object.
 }
 \references{
-  \url{http://www.w3.org/TR/SVG/filters.html#feTurbulenceElement}
+  \url{https://www.w3.org/TR/SVG/filters.html#feTurbulenceElement}
 }
 \author{
   Simon Potter

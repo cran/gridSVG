@@ -30,7 +30,7 @@ feTile(input = NA, ...)
   An \code{fe.tile} object.
 }
 \references{
-  \url{http://www.w3.org/TR/SVG/filters.html#feTileElement}
+  \url{https://www.w3.org/TR/SVG/filters.html#feTileElement}
 }
 \author{
   Simon Potter

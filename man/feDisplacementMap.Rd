@@ -49,7 +49,7 @@ feDisplacementMap(input1 = NA, input2 = NA,
   An \code{fe.displacement.map} object.
 }
 \references{
-  \url{http://www.w3.org/TR/SVG/filters.html#feDisplacementMapElement}
+  \url{https://www.w3.org/TR/SVG/filters.html#feDisplacementMapElement}
 }
 \author{
   Simon Potter

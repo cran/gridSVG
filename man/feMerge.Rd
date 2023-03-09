@@ -56,7 +56,7 @@ feMergeNode(input = NA)
   For \code{feMergeNode}, an \code{fe.merge.node} object.
 }
 \references{
-  \url{http://www.w3.org/TR/SVG/filters.html#feMergeElement}
+  \url{https://www.w3.org/TR/SVG/filters.html#feMergeElement}
 }
 \author{
   Simon Potter

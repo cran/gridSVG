@@ -41,7 +41,7 @@ feOffset(input = NA,
   An \code{fe.offset} object.
 }
 \references{
-  \url{http://www.w3.org/TR/SVG/filters.html#feOffsetElement}
+  \url{https://www.w3.org/TR/SVG/filters.html#feOffsetElement}
 }
 \author{
   Simon Potter

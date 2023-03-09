@@ -1573,7 +1573,11 @@ svgID <- function(svgdev) {
 }
 
 hasLink <- function(link) {
-  ! (is.null(link) || is.na(link))
+    if (length(link) > 1) {
+        warning("grob name has length > 1;  only using first name")
+        link <- link[1]
+    }
+    ! (is.null(link) || is.na(link))
 }
 
 incID <- function(svgdev, n=1) {

@@ -353,7 +353,7 @@ ithAnimUnit <- function(animValues, origValue, i) {
 # is the same for all of x/y/width/height/size (that are being animated)
 ######################
 
-applyAnimation.rect <- function(x, animSet, animation, group, dev) {
+applyAnimation.rect <- function(x, animSet, animation, group, dev, ...) {
 
     if (group) {
         svgAnimate(animation,
@@ -503,7 +503,7 @@ applyAnimation.rect <- function(x, animSet, animation, group, dev) {
     }
 }
 
-applyAnimation.circle <- function(x, animSet, animation, group, dev) {
+applyAnimation.circle <- function(x, animSet, animation, group, dev, ...) {
 
     if (group) {
         svgAnimate(animation,
@@ -575,7 +575,7 @@ applyAnimation.circle <- function(x, animSet, animation, group, dev) {
      }
 }
 
-applyAnimation.points <- function(x, animSet, animation, group, dev) {
+applyAnimation.points <- function(x, animSet, animation, group, dev, ...) {
 
     if (group) {
         svgAnimate(animation,
@@ -759,7 +759,7 @@ applyAnimation.points <- function(x, animSet, animation, group, dev) {
     }
 }
 
-applyAnimation.text <- function(x, animSet, animation, group, dev) {
+applyAnimation.text <- function(x, animSet, animation, group, dev, ...) {
     
     if (group) {
         svgAnimate(animation,
@@ -863,7 +863,7 @@ doNotAnimate <- function(animSet, animation) {
         FALSE
 }
 
-applyAnimation.lines <- function(x, animSet, animation, group, dev) {
+applyAnimation.lines <- function(x, animSet, animation, group, dev, ...) {
     if (group) {
         svgAnimate(animation,
                    paste(ithValue(animSet$animations[[animation]], 1),
@@ -913,7 +913,7 @@ applyAnimation.lines <- function(x, animSet, animation, group, dev) {
     }  
 }
   
-applyAnimation.polyline <- function(x, animSet, animation, group, dev) {
+applyAnimation.polyline <- function(x, animSet, animation, group, dev, ...) {
     if (group) {
         svgAnimate(animation,
                    paste(ithValue(animSet$animations[[animation]], 1),
@@ -981,7 +981,7 @@ applyAnimation.polyline <- function(x, animSet, animation, group, dev) {
 }
 
 # Possibly multiple line segments, each of which become <polyline> elements
-applyAnimation.segments <- function(x, animSet, animation, group, dev) {
+applyAnimation.segments <- function(x, animSet, animation, group, dev, ...) {
     if (group) {
         svgAnimate(animation,
                    paste(ithValue(animSet$animations[[animation]], 1),
@@ -1060,7 +1060,7 @@ applyAnimation.segments <- function(x, animSet, animation, group, dev) {
     }
 }
 
-applyAnimation.polygon <- function(x, animSet, animation, group, dev) {
+applyAnimation.polygon <- function(x, animSet, animation, group, dev, ...) {
     if (group) {
         svgAnimate(animation,
                    paste(ithValue(animSet$animations[[animation]], 1),
@@ -1131,7 +1131,7 @@ applyAnimation.polygon <- function(x, animSet, animation, group, dev) {
     }
 }
 
-applyAnimation.pathgrob <- function(x, animSet, animation, group, dev) {
+applyAnimation.pathgrob <- function(x, animSet, animation, group, dev, ...) {
     if (group) {
         svgAnimate(animation,
                    paste(ithValue(animSet$animations[[animation]], 1),
@@ -1212,7 +1212,7 @@ applyAnimation.pathgrob <- function(x, animSet, animation, group, dev) {
     }  
 }
 
-applyAnimation.rastergrob <- function(x, animSet, animation, group, dev) {
+applyAnimation.rastergrob <- function(x, animSet, animation, group, dev, ...) {
 
     if (group) {
         svgAnimate(animation,
@@ -1386,7 +1386,7 @@ applyAnimation.rastergrob <- function(x, animSet, animation, group, dev) {
     }
 }
 
-applyAnimation.xspline <- function(x, animSet, animation, group, dev) {
+applyAnimation.xspline <- function(x, animSet, animation, group, dev, ...) {
     if (group) {
         svgAnimate(animation,
                    paste(ithValue(animSet$animations[[animation]], 1),
@@ -1499,7 +1499,7 @@ applyAnimation.grob <- function(x, ...) {
                sep=""))
 }
 
-applyAnimation.gTree <- function(x, animSet, animation, group, dev) {
+applyAnimation.gTree <- function(x, animSet, animation, group, dev, ...) {
     if (group) {
         svgAnimate(animation,
                    paste(ithValue(animSet$animations[[animation]], 1),

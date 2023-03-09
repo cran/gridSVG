@@ -125,7 +125,7 @@ feConvolveMatrix(input = NA, order = 3,
   An \code{fe.convolve.matrix} object.
 }
 \references{
-  \url{http://www.w3.org/TR/SVG/filters.html#feConvolveMatrixElement}
+  \url{https://www.w3.org/TR/SVG/filters.html#feConvolveMatrixElement}
 }
 \author{
   Simon Potter

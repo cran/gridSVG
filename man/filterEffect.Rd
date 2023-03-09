@@ -93,7 +93,7 @@ addFilterEffect(filter, filterEffect, after = NA)
   A \code{filter} object.
 }
 \references{
-  \url{http://www.w3.org/TR/SVG/filters.html#FilterElement}
+  \url{https://www.w3.org/TR/SVG/filters.html#FilterElement}
 }
 \author{
   Simon Potter

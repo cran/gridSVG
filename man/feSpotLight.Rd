@@ -73,7 +73,7 @@ feSpotLight(x = unit(0, "npc"), y = unit(0, "npc"), z = unit(0, "npc"),
   An \code{fe.spot.light} object.
 }
 \references{
-  \url{http://www.w3.org/TR/SVG/filters.html#feSpotLightElement}
+  \url{https://www.w3.org/TR/SVG/filters.html#feSpotLightElement}
 }
 \author{
   Simon Potter

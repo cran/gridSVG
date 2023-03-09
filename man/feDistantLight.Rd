@@ -33,7 +33,7 @@ feDistantLight(azimuth = 0, elevation = 0, ...)
   An \code{fe.distant.light} object.
 }
 \references{
-  \url{http://www.w3.org/TR/SVG/filters.html#feDistantLightElement}
+  \url{https://www.w3.org/TR/SVG/filters.html#feDistantLightElement}
 }
 \author{
   Simon Potter

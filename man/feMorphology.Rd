@@ -43,7 +43,7 @@ feMorphology(input = NA, operator = c("erode", "dilate"),
   An \code{fe.morphology} object.
 }
 \references{
-  \url{http://www.w3.org/TR/SVG/filters.html#feMorphologyElement}
+  \url{https://www.w3.org/TR/SVG/filters.html#feMorphologyElement}
 }
 \author{
   Simon Potter

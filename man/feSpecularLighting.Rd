@@ -77,7 +77,7 @@ feSpecularLighting(input = NA,
   An \code{fe.specular.lighting} object.
 }
 \references{
-  \url{http://www.w3.org/TR/SVG/filters.html#feSpecularLightingElement}
+  \url{https://www.w3.org/TR/SVG/filters.html#feSpecularLightingElement}
 }
 \author{
   Simon Potter

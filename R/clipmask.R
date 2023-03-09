@@ -172,20 +172,20 @@ primToDev.pathClipped.grob <- function(x, dev) {
     primToDev(cpg, dev)
 }
 
-drawDef.clipPathDef <- function(x, dev) {
-    grob <- x$grob
+drawDef.clipPathDef <- function(def, dev) {
+    grob <- def$grob
     # This is always going to be true because we basically assume that
     # referenced content is fixed and therefore the names don't really
     # matter.
     if (get("use.gPaths", envir = .gridSVGEnv))
-        grob$name <- paste(x$label, grob$name,
+        grob$name <- paste(def$label, grob$name,
                            sep = getSVGoption("gPath.sep"))
     # Start clipPath
-    devStartClipPath(list(name = x$id), NULL, dev)
+    devStartClipPath(list(name = def$id), NULL, dev)
     # Draw grob
     grobToDev(grid.force(grob), dev)
     # Close clipPath, open group
-    devEndClipPath(list(name = x$id), NULL, dev)
+    devEndClipPath(list(name = def$id), NULL, dev)
 }
 
 primToDev.clipPath <- function(x, dev) {
@@ -432,20 +432,20 @@ primToDev.mask <- function(x, dev) {
                            classes = x$classes), NULL, dev)
 }
 
-drawDef.maskDef <- function(x, dev) {
-    grob <- x$grob
+drawDef.maskDef <- function(def, dev) {
+    grob <- def$grob
     # This is always going to be true because we basically assume that
     # referenced content is fixed and therefore the names don't really
     # matter.
     if (get("use.gPaths", envir = .gridSVGEnv))
-        grob$name <- paste(x$label, grob$name,
+        grob$name <- paste(def$label, grob$name,
                            sep = getSVGoption("gPath.sep"))
     # Start mask
-    devStartMask(devGrob(x, dev), NULL, dev)
+    devStartMask(devGrob(def, dev), NULL, dev)
     # Draw grob
     grobToDev(grid.force(grob), dev)
     # Close mask
-    devEndMask(devGrob(x, dev), NULL, dev)
+    devEndMask(devGrob(def, dev), NULL, dev)
 }
 
 

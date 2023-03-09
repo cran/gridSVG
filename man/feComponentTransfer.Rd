@@ -96,8 +96,8 @@ transferFunction(type = c("identity", "table", "discrete",
   For \code{transferFunction}, a \code{transfer.function} object.
 }
 \references{
-  \url{http://www.w3.org/TR/SVG/filters.html#feComponentTransferElement},
-  \url{http://www.w3.org/TR/SVG/filters.html#feFuncRElement}
+  \url{https://www.w3.org/TR/SVG/filters.html#feComponentTransferElement},
+  \url{https://www.w3.org/TR/SVG/filters.html#feFuncRElement}
 }
 \author{
   Simon Potter

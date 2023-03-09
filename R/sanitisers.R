@@ -48,6 +48,11 @@ escapeSelector <- function(x, escapeNonASCII = FALSE, escapeJS = FALSE) {
         escapeCache[["\u2029"]] <- "\\u2029"
     }
 
+    if (length(x) > 1) {
+        warning("grob name has length > 1;  only using first name")
+        x <- x[1]
+    }
+
     chars <- substring(x, 1:nchar(x), 1:nchar(x))
     n <- length(chars)
     # Begin CSS escaping
@@ -99,6 +104,10 @@ escapeSelector <- function(x, escapeNonASCII = FALSE, escapeJS = FALSE) {
 escapeXPath <- function(x) {
     # We're going to use single quotes, so escape only those.
     # RJSONIO uses ", so is safer to use single quotes
+    if (length(x) > 1) {
+        warning("grob name has length > 1;  only using first name")
+        x <- x[1]
+    }
     if (grepl("'", x))
         x <- gsub("'", "\\\\'", x)
 

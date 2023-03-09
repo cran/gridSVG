@@ -37,7 +37,7 @@ feBlend(input1 = NA, input2 = NA,
   An \code{fe.blend} object.
 }
 \references{
-  \url{http://www.w3.org/TR/SVG/filters.html#feBlendElement}
+  \url{https://www.w3.org/TR/SVG/filters.html#feBlendElement}
 }
 \author{
   Simon Potter

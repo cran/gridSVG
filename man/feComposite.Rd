@@ -63,7 +63,7 @@ feComposite(input1 = NA, input2 = NA,
   An \code{fe.composite} object.
 }
 \references{
-  \url{http://www.w3.org/TR/SVG/filters.html#feCompositeElement}
+  \url{https://www.w3.org/TR/SVG/filters.html#feCompositeElement}
 
   Compositing Digital Images, T. Porter and T. Duff. SIGGRAPH '84
   Conference Proceedings, Association for Computing Machinery, Volume

@@ -31,8 +31,8 @@ feImage(preserveAspectRatio = "xMidYMid meet", href = "", ...)
   An \code{fe.image} object.
 }
 \references{
-  \url{http://www.w3.org/TR/SVG/filters.html#feImageElement}
-  \url{http://www.w3.org/TR/SVG/coords.html#PreserveAspectRatioAttribute}
+  \url{https://www.w3.org/TR/SVG/filters.html#feImageElement}
+  \url{https://www.w3.org/TR/SVG/coords.html#PreserveAspectRatioAttribute}
 }
 \author{
   Simon Potter

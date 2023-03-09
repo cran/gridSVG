@@ -35,7 +35,7 @@ feGaussianBlur(input = NA, sd = 0, ...)
   An \code{fe.gaussian.blur} object.
 }
 \references{
-  \url{http://www.w3.org/TR/SVG/filters.html#feGaussianBlurElement}
+  \url{https://www.w3.org/TR/SVG/filters.html#feGaussianBlurElement}
 }
 \author{
   Simon Potter
