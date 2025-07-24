@@ -92,7 +92,7 @@ radialGradient(col = c("black", "white"),
   first, with later stops being drawn over the top.
 
   For \code{spreadMethod} the possible values are:
-  \itemize{
+  \describe{
     \item{pad}{
       Use the terminal colors of the gradient to fill the remainder of
       the target region.

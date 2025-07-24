@@ -666,7 +666,7 @@
     \item Initial support for 'frameGrob's (and 'cellGrob's). (Simon)
 
     \item Numerical justification of text is supported. Justification
-    parameters are rounded so they belong to one of {0, 0.5, 1}. (Simon)
+    parameters are rounded so they belong to one of \code{c(0, 0.5, 1)}. (Simon)
 
     \item 'gTree' support has been improved, all 'lattice' demos can now
     be drawn, along with some 'ggplot2' plots (assuming 'pch's are
