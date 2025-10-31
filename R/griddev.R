@@ -729,7 +729,8 @@ primToDev.polyline <- function(x, dev) {
   x$name <- getID(x$name, "grob")
 
   # If we only have one line
-  if (is.null(x$id) && is.null(x$id.lengths)) {
+  if ((is.null(x$id) && is.null(x$id.lengths)) ||
+      (!is.null(x$id) && all(is.na(x$id)))) {
       x$id <- rep(1L, length(x$x))
   }
 
@@ -810,7 +811,8 @@ primToDev.segments <- function(x, dev) {
 
 primToDev.polygon <- function(x, dev) {
   # If we have only one polygon
-  if (is.null(x$id) && is.null(x$id.lengths)) {
+  if ((is.null(x$id) && is.null(x$id.lengths)) ||
+      (!is.null(x$id) && all(is.na(x$id)))) {
       x$id <- rep(1L, length(x$x))
   }
 

@@ -2,7 +2,16 @@
 \title{NEWS file for the gridSVG package}
 \encoding{UTF-8}
 
-\section{Changes in version 1.7-5}{
+\section{Changes in version 1.7-7}{
+  \itemize{
+    \item Protect against psychotic polygons and polylines from
+    \pkg{ggplot2} that have an \code{id} component full of \code{NA}s
+    (from \code{geom_smooth(se=TRUE)} with too few points to generate
+    ribbon).
+    Thanks to Niranjan Kalaiselvan for the bug report.
+  }
+}
+\section{Changes in version 1.7-6}{
   \itemize{
     \item Fix in \code{escapeXPath()} for \dQuote{the condition has
       length > 1} error.  Thanks to Dzimitry Markouski.
